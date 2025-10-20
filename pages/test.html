@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Two Column Layout</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+        }
+        .container {
+            display: flex;
+            gap: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .column {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .left-column {
+            flex: 1;
+        }
+        .right-column {
+            flex: 1;
+        }
+        pre {
+            font-family: monospace;
+            line-height: 1.2;
+            font-size: 12px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="column left-column">
+            <h1>Left Column</h1>
+            <p>This is the left column with some sample content.</p>
+            <p>You can add any content you want here - text, images, forms, or whatever else you need for your page.</p>
+            <h2>Features</h2>
+            <p>The layout uses flexbox for easy responsive design and equal-width columns.</p>
+        </div>
+        
+        <div class="column right-column">
+            <h1>Right Column</h1>
+            <pre>
+       ___
+    __/_  `.  .-"""-.
+    \_,` | \-'  /   )`-')
+     "") `"`    \  ((`"`
+    ___Y  ,    .'7 /|
+   (_,___/...-` (_/_/
+            </pre>
+            <p style="text-align: center; margin-top: 10px;">D'oh!</p>
+        </div>
+    </div>
+</body>
+</html>

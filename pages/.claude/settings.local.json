@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//etc/nginx/**)",
+      "Bash(nginx:*)",
+      "Bash(systemctl reload:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
