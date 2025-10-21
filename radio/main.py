@@ -147,6 +147,9 @@ async def proxy_stream(url: str):
         headers={
             'Cache-Control': 'no-cache',
             'Accept-Ranges': 'none',
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type',
         }
     )
 
@@ -160,7 +163,13 @@ def post(name: str, url: str):
     })
 
     # Redirect back to home
-    return RedirectResponse('/', status_code=303)
+    return RedirectResponse('/radio/', status_code=303)
+
+@rt('/delete/{station_name}', methods=['post'])
+def delete(station_name: str):
+    """Delete a station from the database."""
+    stations_table.delete(station_name)
+    return RedirectResponse('/radio/', status_code=303)
 
 @rt('/')
 def get():
@@ -215,7 +224,7 @@ def get():
                        style='padding: 10px 20px; background-color: #28a745; color: white; border: none; cursor: pointer; flex: 1;'),
                 style='display: flex; gap: 10px;'
             ),
-            action='/add_station',
+            action='/radio/add_station',
             method='post'
         ),
         style='margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; background-color: #f9f9f9;'
@@ -238,6 +247,14 @@ def get():
                        cls='station-btn',
                        onclick=f"playStation('{station_name}', '{play_url}')",
                        style='padding: 8px 16px; background-color: #6c757d; color: white; border: none; cursor: pointer; margin-left: 10px;'),
+                Form(
+                    Button('🗑️',
+                           type='submit',
+                           style='padding: 8px 16px; background-color: #dc3545; color: white; border: none; cursor: pointer; margin-left: 8px;'),
+                    method='post',
+                    action=f'/radio/delete/{urllib.parse.quote(station_name)}',
+                    style='display: inline; margin: 0;'
+                ),
                 style='display: flex; align-items: center; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 5px; background-color: #fff;'
             )
         )
@@ -260,11 +277,11 @@ def get():
 
     return Titled('🎵 Web Radio Player',
         status_div,
-        debug_div,
         custom_input,
         H3('Preset Stations'),
         Div(*station_list),
         random_btn,
+        debug_div,
         Script(audio_js),
         style='max-width: 600px; margin: 0 auto; padding: 20px; font-family: Arial, sans-serif;'
     )
