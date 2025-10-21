@@ -275,7 +275,7 @@ def get():
         style='padding: 12px 24px; background-color: #17a2b8; color: white; border: none; cursor: pointer; font-size: 1.1em; margin: 20px 0; width: 100%;'
     )
 
-    return Titled('🎵 Web Radio Player',
+    return Titled('Lalten 🏮 Web Radio Player',
         status_div,
         H3('Preset Stations'),
         Div(*station_list),
