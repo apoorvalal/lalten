@@ -1,11 +1,38 @@
-# `termradio` : a terminal-based radio player
+# Web Radio Player
 
-A simple, bare-bones terminal-based radio player, with an opinionated set of default stations.  Lots of radio stations have streaming links that can be piped directly
-into a media player. Keeping track of them and playing them in a
-browser became cumbersome, so I wrote a little python program
-`termradio` to play the radio from the terminal.
+A FastHTML-based web radio player with streaming proxy support, accessible at [lalten.org/radio](https://lalten.org/radio). Features preset stations (KEXP, SomaFM, KCRW) and custom stream support for MP3, PLS, and M3U URLs.
 
-## usage
+## Features
+
+- HTML5 audio playback with streaming proxy
+- Add/delete custom stations
+- Playlist parsing (.pls, .m3u files)
+- Random station selector
+- Debug console for troubleshooting
+- Persistent SQLite database
+
+## Web App Deployment
+
+The web app runs on port 8750 and is accessible at `/radio` via nginx reverse proxy. Key configuration:
+
+- **Nginx streaming proxy** at `/proxy` with `proxy_buffering off` for proper audio streaming
+- **CORS headers** for HTML5 audio cross-origin support
+- **Database**: SQLite (`radio.db`) with stations table using `name` as primary key
+- **Routes**:
+  - `GET /` - Main radio interface
+  - `POST /radio/add_station` - Add new station
+  - `POST /radio/delete/{station_name}` - Delete station
+  - `GET /proxy?url=<stream_url>` - Streaming proxy endpoint
+
+See main repo README for systemd service setup.
+
+---
+
+## Terminal Version (`termradio.py`)
+
+A simple, bare-bones terminal radio player with an opinionated set of default stations.
+
+### Usage
 
 ```{python}
 python3 termradio.py SOMAGroove

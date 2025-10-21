@@ -15,9 +15,10 @@ Personal/family website at **lalten.org** hosting static pages and FastHTML web 
 nginx (443/HTTPS) → Path-based routing
 ├── /           → Static landing page (/var/www/html/index.html)
 ├── /pages/     → Static file directory (/root/lalten/pages/)
-├── /menu       → FastHTML app (port 8742)
-├── /notes      → FastHTML app (port 8765)
-└── /radio      → FastHTML app (port 8750)
+├── /menu       → FastHTML app (port 8742) - Menu planner
+├── /notes      → FastHTML app (port 8765) - Note-taking app
+├── /radio      → FastHTML app (port 8750) - Web radio player with streaming proxy
+└── /proxy      → Radio streaming endpoint (proxies to port 8750)
 ```
 
 ## Generalized Recipe for New CRUD Apps

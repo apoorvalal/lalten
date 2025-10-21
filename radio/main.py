@@ -277,10 +277,10 @@ def get():
 
     return Titled('🎵 Web Radio Player',
         status_div,
-        custom_input,
         H3('Preset Stations'),
         Div(*station_list),
         random_btn,
+        custom_input,
         debug_div,
         Script(audio_js),
         style='max-width: 600px; margin: 0 auto; padding: 20px; font-family: Arial, sans-serif;'
