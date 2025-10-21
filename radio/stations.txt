@@ -1,0 +1,6 @@
+{
+  "KEXP 90.3 FM Seattle"    : "https://kexp-mp3-128.streamguys1.com/kexp128.mp3",
+  "KCRW Music"              : "http://media.kcrw.com/pls/kcrwmusic.pls",
+  "Bluemars Ambient"        : "http://streams.echoesofbluemars.org:8000/bluemars.m3u",
+  "Bluemars Cryosleep"      : "http://streams.echoesofbluemars.org:8000/cryosleep.m3u"
+}
