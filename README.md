@@ -1,5 +1,9 @@
 # lalten
-bare metal website repo
+bare metal website repo. High-level steps for setup: 
+
+1. get a small vps (~raspberry pi housed in some rural shed). Hetzner's go for the price of a coffee.
+2. (optional) buy a domain on namecheap and point the VPS's IP address at the domain.
+3. host index.html and webapps on the VPS and access it either via the ip address or the domain name. For example, check out my radio player at [this](https://lalten.org/radio) link. 
 
 ## Architecture
 
@@ -158,26 +162,3 @@ systemctl reload nginx
 - **Styling**: Pico CSS (CDN) + inline styles
 - **Server**: Nginx reverse proxy
 - **Process Management**: systemd services
-
-## Apps
-
-### `/menu` - Family Menu Planner
-Simple CRUD app for tracking meal ideas.
-- Port: 8742
-- Database: menu.db
-
-### `/notes` - Family Shopping List
-Shopping list with archive/reactivate functionality.
-- Port: 8765
-- Database: notes.db
-- Features: Active/Archived item states
-
-### `/radio` - Web Radio Player
-Stream internet radio stations with custom URL support.
-- Port: 8750
-- Database: radio.db
-- Features: Preset stations, custom URL input with save, playlist resolution (.pls/.m3u), HTTP/HTTPS proxy for mixed content
-
-## Documentation
-
-See `config_summary.md` for detailed infrastructure documentation.
