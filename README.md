@@ -28,10 +28,10 @@ nginx (443/HTTPS) → Path-based routing
 ```bash
 mkdir /root/lalten/<app_name>
 cd /root/lalten/<app_name>
-python3 -m venv .venv
+uv venv
 source .venv/bin/activate
-pip install python-fasthtml
-pip freeze > requirements.txt
+uv pip install python-fasthtml
+uv pip freeze > requirements.txt
 ```
 
 ### 2. Write `main.py` (Template)

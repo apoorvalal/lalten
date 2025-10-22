@@ -6,7 +6,7 @@ After=network.target
 Type=simple
 User=root
 WorkingDirectory=/root/lalten/radio
-ExecStart=/snap/bin/uv run python /root/lalten/radio/main.py
+ExecStart=uv run python /root/lalten/radio/main.py
 Restart=always
 
 [Install]
