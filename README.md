@@ -189,3 +189,46 @@ systemctl disable <service_name>.service
 - **Styling**: Pico CSS (CDN) + inline styles
 - **Server**: Nginx reverse proxy
 - **Process Management**: systemd services
+
+## Configuration Summary
+
+> **Note**: This section of the document is automatically updated whenever configuration changes are made to the website infrastructure.
+
+
+## Nginx Configuration
+
+### Primary Site: lalten.org
+
+**Config File**: `/etc/nginx/sites-available/lalten.org`
+**Enabled**: Yes (symlinked in `/etc/nginx/sites-enabled/`)
+
+#### Server Details
+- **Domains**: `lalten.org`, `www.lalten.org`
+- **SSL/TLS**: Let's Encrypt certificates managed by Certbot
+  - Certificate: `/etc/letsencrypt/live/lalten.org/fullchain.pem`
+  - Private Key: `/etc/letsencrypt/live/lalten.org/privkey.pem`
+- **HTTP→HTTPS**: Automatic redirect from port 80 to 443
+
+#### Routes
+
+**Proxy Headers Set**:
+- `Host: $host`
+- `X-Real-IP: $remote_addr`
+
+## Maintenance Notes
+
+### SSL Certificate Renewal
+Certificates are managed by Certbot and should auto-renew. Monitor expiration dates.
+
+### Database Backups
+
+WAL (Write-Ahead Logging) files present, indicating active usage.
+
+### Updates Required
+When making changes, update this document and note:
+1. Change description
+2. Date of change
+3. Files affected
+4. Any required service restarts
+
+
