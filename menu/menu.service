@@ -1,0 +1,13 @@
+[Unit]
+Description=Menu Planner Web Application
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/lalten/menu
+ExecStart=/snap/bin/uv run python /root/lalten/menu/main.py
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

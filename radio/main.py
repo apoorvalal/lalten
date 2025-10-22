@@ -59,6 +59,9 @@ function playStation(name, url) {
         log('✓ Playback started');
         nowPlaying.textContent = 'Now Playing: ' + name;
         document.getElementById('pauseBtn').textContent = '⏸️ Pause';
+
+        // Update Media Session API for background playback support
+        updateMediaSession(name);
     });
     audio.addEventListener('pause', () => {
         log('Paused');
@@ -120,6 +123,47 @@ function setVolume(value) {
     if (audio) {
         audio.volume = value / 100;
         log(`Volume set to ${value}%`);
+    }
+}
+
+function updateMediaSession(stationName) {
+    // Media Session API for background playback and native controls
+    if ('mediaSession' in navigator) {
+        navigator.mediaSession.metadata = new MediaMetadata({
+            title: stationName,
+            artist: 'Lalten Radio',
+            album: 'Web Radio Player',
+            artwork: [
+                { src: 'https://lalten.org/favicon.ico', sizes: '48x48', type: 'image/x-icon' },
+            ]
+        });
+
+        // Setup media control handlers
+        navigator.mediaSession.setActionHandler('play', () => {
+            if (audio) {
+                audio.play();
+                log('Media Session: Play');
+            }
+        });
+
+        navigator.mediaSession.setActionHandler('pause', () => {
+            if (audio) {
+                audio.pause();
+                log('Media Session: Pause');
+            }
+        });
+
+        navigator.mediaSession.setActionHandler('stop', () => {
+            if (audio) {
+                audio.pause();
+                audio.currentTime = 0;
+                log('Media Session: Stop');
+            }
+        });
+
+        log('✓ Media Session API enabled (may help with background playback)');
+    } else {
+        log('⚠ Media Session API not supported by this browser', false);
     }
 }
 
@@ -277,9 +321,9 @@ def get():
 
     return Titled('Lalten 🏮 Web Radio Player',
         status_div,
+        random_btn,
         H3('Preset Stations'),
         Div(*station_list),
-        random_btn,
         custom_input,
         debug_div,
         Script(audio_js),

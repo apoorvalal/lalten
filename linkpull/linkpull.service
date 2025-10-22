@@ -1,0 +1,13 @@
+[Unit]
+Description=LinkPull Web Application
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/lalten/linkpull
+ExecStart=/snap/bin/uv run python /root/lalten/linkpull/main.py
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,13 @@
+[Unit]
+Description=Notes Web Application
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/lalten/notes
+ExecStart=/snap/bin/uv run python /root/lalten/notes/main.py
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

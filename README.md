@@ -107,7 +107,7 @@ After=network.target
 Type=simple
 User=root
 WorkingDirectory=/root/lalten/<app_name>
-ExecStart=/usr/bin/uv run python /root/lalten/<app_name>/main.py
+ExecStart=/snap/bin/uv run python /root/lalten/<app_name>/main.py
 Restart=always
 
 [Install]
@@ -152,9 +152,35 @@ systemctl reload nginx
 ### 5. Port Allocation
 
 - `8742` - menu app
+- `8743` - linkpull app
 - `8750` - radio app
 - `8765` - notes app
 - `87XX` - future apps (choose next available)
+
+### 6. Managing Services
+
+All webapps run as systemd services and start automatically on boot. Service files are stored in each app's directory and symlinked to `/etc/systemd/system/`.
+
+**View service status:**
+```bash
+systemctl status menu.service notes.service linkpull.service radio.service
+```
+
+**Restart a service (after code changes):**
+```bash
+systemctl restart <service_name>.service
+```
+
+**View logs:**
+```bash
+journalctl -u <service_name>.service -f
+```
+
+**Stop/disable a service:**
+```bash
+systemctl stop <service_name>.service
+systemctl disable <service_name>.service
+```
 
 ## Tech Stack
 
