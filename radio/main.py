@@ -4,12 +4,41 @@ from db_setup import init_db
 from playlist_parser import parse_playlist_url
 import json
 import urllib.parse
+import re
 
 # Initialize
 db = init_db()
 stations_table = db.t.stations
 
 app, rt = fast_app()
+
+def validate_station_input(name, url):
+    """Validate and sanitize station name and URL."""
+    # Sanitize name: strip whitespace, limit length, remove control characters
+    name = name.strip()[:100]
+    name = re.sub(r'[\x00-\x1f\x7f-\x9f]', '', name)
+
+    if not name:
+        raise ValueError("Station name cannot be empty")
+
+    # Validate URL
+    url = url.strip()
+    if not url:
+        raise ValueError("URL cannot be empty")
+
+    # Check URL scheme
+    if not (url.startswith('http://') or url.startswith('https://')):
+        raise ValueError("URL must start with http:// or https://")
+
+    # Basic URL validation
+    if len(url) > 2000:
+        raise ValueError("URL too long")
+
+    # Check for invalid characters that might break things
+    if any(c in url for c in ['\n', '\r', '\t', '\x00']):
+        raise ValueError("URL contains invalid characters")
+
+    return name, url
 
 # Embedded JavaScript using native HTML5 Audio
 audio_js = """
@@ -200,11 +229,31 @@ async def proxy_stream(url: str):
 @rt('/add_station')
 def post(name: str, url: str):
     """Add a new station to the database."""
-    # Store the original URL (don't resolve yet - let proxy handle it)
-    stations_table.insert({
-        'name': name,
-        'stream_url': url
-    })
+    try:
+        # Validate and sanitize inputs
+        name, url = validate_station_input(name, url)
+
+        # Store the original URL (don't resolve yet - let proxy handle it)
+        stations_table.insert({
+            'name': name,
+            'stream_url': url
+        })
+    except ValueError as e:
+        # Return error page instead of redirecting
+        return Titled('Error',
+            Style("""
+                @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
+                * {
+                    font-family: 'JetBrains Mono', 'Courier New', monospace;
+                }
+            """),
+            Div(
+                H2('Invalid Input'),
+                P(str(e)),
+                A('← Back to Radio', href='/radio/', style='color: #007bff; text-decoration: underline;'),
+                style='padding: 20px; max-width: 600px; margin: 0 auto;'
+            )
+        )
 
     # Redirect back to home
     return RedirectResponse('/radio/', status_code=303)
@@ -314,12 +363,18 @@ def get():
         onclick=f'''
             const stations = {random_stations_json};
             const station = stations[Math.floor(Math.random() * stations.length)];
-            playStation(station.name, station.url);
+            playStation(station.name, '/proxy?url=' + encodeURIComponent(station.url));
         ''',
         style='padding: 12px 24px; background-color: #17a2b8; color: white; border: none; cursor: pointer; font-size: 1.1em; margin: 20px 0; width: 100%;'
     )
 
     return Titled('Lalten 🏮 Web Radio Player',
+        Style("""
+            @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
+            * {
+                font-family: 'JetBrains Mono', 'Courier New', monospace;
+            }
+        """),
         status_div,
         random_btn,
         H3('Preset Stations'),
@@ -327,7 +382,7 @@ def get():
         custom_input,
         debug_div,
         Script(audio_js),
-        style='max-width: 600px; margin: 0 auto; padding: 20px; font-family: Arial, sans-serif;'
+        style='max-width: 600px; margin: 0 auto; padding: 20px;'
     )
 
 serve(host='0.0.0.0', port=8750)
