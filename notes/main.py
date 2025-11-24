@@ -105,8 +105,19 @@ def get():
 @rt('/add', methods=['post'])
 def post(content: str):
     from datetime import datetime
+    import re
+
     if content.strip():
-        notes.insert(content=content, created_at=datetime.now().isoformat(), status='active')
+        # Split by newline, comma, or semicolon
+        items = re.split(r'[\n,;]+', content)
+
+        # Clean up each item and filter out empty ones
+        items = [item.strip() for item in items if item.strip()]
+
+        # Insert each item as a separate entry
+        for item in items:
+            notes.insert(content=item, created_at=datetime.now().isoformat(), status='active')
+
     return RedirectResponse('/notes', status_code=303)
 
 @rt('/archive/{note_id}', methods=['post'])
