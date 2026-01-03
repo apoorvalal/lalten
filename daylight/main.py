@@ -72,11 +72,19 @@ def api_daylight(lat: float, lon: float, day: float):
     # lon currently unused (day length depends only on latitude in this model)
     days, D, dD = daylight_curve_and_derivative(lat)
     sel = float(daylight_hours(lat, day))
+
+    # Calculate cumulative change from Jan 1 (day 0) to selected day
+    # Integral of derivative = D(day) - D(0)
+    daylight_jan1 = float(D[0])
+    hours_gained = sel - daylight_jan1
+
     return {
         "lat": lat,
         "lon": lon,
         "day": day,
         "selected_daylight_hours": sel,
+        "daylight_jan1": daylight_jan1,
+        "hours_gained_from_jan1": hours_gained,
         "days": days.tolist(),
         "daylight_hours": D.tolist(),
         "derivative_hours_per_day": dD.tolist(),
@@ -384,11 +392,17 @@ def index():
 
                             // Readout
                             var readout = document.getElementById('readout');
+                            var hoursGained = data.hours_gained_from_jan1;
+                            var gainedText = hoursGained >= 0 ?
+                                ('+' + hoursGained.toFixed(2) + ' hours gained') :
+                                (hoursGained.toFixed(2) + ' hours lost');
+
                             readout.innerHTML =
                                 '<div style="font-weight:600; margin-bottom:6px;">Current Selection</div>' +
                                 '<div>Latitude: ' + data.lat.toFixed(2) + ', Longitude: ' + data.lon.toFixed(2) + '</div>' +
                                 '<div>Day of year: ' + data.day.toFixed(0) + '</div>' +
-                                '<div>Daylight: ' + data.selected_daylight_hours.toFixed(2) + ' hours</div>';
+                                '<div>Daylight: ' + data.selected_daylight_hours.toFixed(2) + ' hours</div>' +
+                                '<div>Change from Jan 1: ' + gainedText + '</div>';
                         });
                 }
 
