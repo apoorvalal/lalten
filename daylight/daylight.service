@@ -1,0 +1,15 @@
+[Unit]
+Description=Daylight Explorer Web Application
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/lalten/daylight
+ExecStart=/snap/bin/uv run python main.py
+Restart=always
+Environment="PORT=8752"
+Environment="HOST=127.0.0.1"
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,13 @@
+[Unit]
+Description=Parenting (Milk Inventory) Web Application
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/lalten/parenting
+ExecStart=/snap/bin/uv run streamlit run milk.py --server.port 8751 --server.address 127.0.0.1 --server.baseUrlPath /parenting --server.headless true
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
