@@ -232,3 +232,21 @@ When making changes, update this document and note:
 4. Any required service restarts
 
 
+
+## Krabbs-assisted authoring + deployment (automated workflow)
+
+This repo is now routinely updated by an assistant ("Krabbs") that can:
+
+- Create **static apps** (single `index.html` with embedded JS/CSS) under `/root/lalten/<app>/`.
+  - Expose them with an nginx `location /<app>/ { alias /root/lalten/<app>/; }` block.
+- Create / modify **FastHTML Python apps** under `/root/lalten/<app>/`.
+  - Create a `systemd` service file in the app directory and symlink it into `/etc/systemd/system/`.
+  - Ensure the app binds to `127.0.0.1:<port>` and is only exposed via nginx (reduced attack surface).
+- Update `/root/lalten/nginx.conf` safely (then `nginx -t` and `systemctl reload nginx`).
+- Deploy digest-like artifacts (e.g., via SQLite upserts over SSH) without adding new public APIs.
+
+**Important constraints:**
+- Do not commit secrets/credentials.
+- Prefer localhost-only app binds + nginx reverse proxy.
+- Keep generated artifacts (DBs, venvs) out of git via `.gitignore`.
+

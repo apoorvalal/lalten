@@ -385,4 +385,4 @@ def get():
         style='max-width: 600px; margin: 0 auto; padding: 20px;'
     )
 
-serve(host='0.0.0.0', port=8750)
+serve(host='127.0.0.1', port=8750)

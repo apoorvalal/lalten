@@ -1,0 +1,13 @@
+[Unit]
+Description=KrustyTheKrabs (Pinch Counter) Web Application
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/lalten/krustythekrabs
+ExecStart=/snap/bin/uv run python /root/lalten/krustythekrabs/main.py
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

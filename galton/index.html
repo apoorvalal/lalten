@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Galton Board</title>
+  <style>
+    :root{--bg:#0b0f14;--fg:#e6edf3;--muted:#9da7b3;--card:#111823;--accent:#4aa3ff;}
+    body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; background:var(--bg); color:var(--fg);}
+    .wrap{max-width:1100px;margin:0 auto;padding:18px;}
+    h1{font-size:20px;margin:0 0 10px 0;}
+    .row{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-start;}
+    .panel{background:var(--card);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:14px;flex:1;min-width:280px;}
+    label{display:block;font-size:13px;color:var(--muted);margin-top:10px;}
+    input[type=range]{width:100%;}
+    input[type=number]{width:100%;padding:8px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.12);background:#0c121b;color:var(--fg);}
+    .btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;}
+    button{cursor:pointer;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:#0c121b;color:var(--fg);padding:10px 12px;font-weight:600;}
+    button.primary{background:rgba(74,163,255,.16);border-color:rgba(74,163,255,.35);}
+    button:disabled{opacity:.6;cursor:not-allowed;}
+    .hint{color:var(--muted);font-size:12px;line-height:1.35;margin-top:10px;}
+    canvas{width:100%;height:auto;background:#070a0e;border-radius:10px;border:1px solid rgba(255,255,255,.08);} 
+    .kv{display:flex;justify-content:space-between;font-size:13px;margin-top:6px;color:var(--muted)}
+    .kv b{color:var(--fg);font-weight:600}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Galton’s Board (toggle width, biased pegs)</h1>
+    <div class="row">
+      <div class="panel">
+        <label>Rows / width (number of peg levels): <span id="rowsVal"></span></label>
+        <input id="rows" type="range" min="3" max="32" step="1" value="16" />
+
+        <label>Bias p (probability of going right at each peg): <span id="pVal"></span></label>
+        <input id="p" type="range" min="0" max="1" step="0.01" value="0.50" />
+
+        <label>Drop rate (balls/sec): <span id="rateVal"></span></label>
+        <input id="rate" type="range" min="1" max="200" step="1" value="30" />
+
+        <label>Balls to drop (batch):</label>
+        <input id="batch" type="number" min="1" max="20000" step="1" value="100" />
+
+        <div class="btns">
+          <button class="primary" id="start">Start</button>
+          <button id="stop" disabled>Stop</button>
+          <button id="drop">Drop batch</button>
+          <button id="reset">Reset</button>
+        </div>
+
+        <div class="kv"><span>Total balls:</span><b id="total">0</b></div>
+        <div class="kv"><span>Mean bin:</span><b id="mean">–</b></div>
+        <div class="kv"><span>Expected mean:</span><b id="emean">–</b></div>
+
+        <div class="hint">
+          Notes:
+          <ul>
+            <li>Each ball makes Bernoulli decisions at pegs: right w.p. <b>p</b>, left w.p. <b>1−p</b>.</li>
+            <li><b>Drop batch</b> now pauses streaming (if running) and drops exactly the batch size.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="panel" style="flex:2;min-width:420px;">
+        <canvas id="c" width="980" height="620"></canvas>
+        <div class="hint">Balls animate through a schematic peg field; histogram updates when balls land.</div>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+
+  const rowsEl = document.getElementById('rows');
+  const pEl = document.getElementById('p');
+  const rateEl = document.getElementById('rate');
+  const batchEl = document.getElementById('batch');
+
+  const rowsVal = document.getElementById('rowsVal');
+  const pVal = document.getElementById('pVal');
+  const rateVal = document.getElementById('rateVal');
+
+  const startBtn = document.getElementById('start');
+  const stopBtn = document.getElementById('stop');
+  const dropBtn = document.getElementById('drop');
+  const resetBtn = document.getElementById('reset');
+
+  const totalEl = document.getElementById('total');
+  const meanEl = document.getElementById('mean');
+  const emeanEl = document.getElementById('emean');
+
+  // Board geometry
+  const topPad = 30;
+  const bottomPad = 70;
+  const leftPad = 40;
+  const rightPad = 30;
+
+  let rows = +rowsEl.value;
+  let p = +pEl.value;
+  let rate = +rateEl.value;
+
+  let bins = rows + 1;
+  let counts = new Array(bins).fill(0);
+  let total = 0;
+
+  // animation state
+  let running = false;       // streaming mode
+  let lastT = performance.now();
+  let carry = 0;
+
+  const balls = [];          // active balls on screen
+  const MAX_BALLS = 400;     // cap to keep rendering stable
+
+  function layout(){
+    const W = canvas.width, H = canvas.height;
+    const boardW = W - leftPad - rightPad;
+    const boardH = H - topPad - bottomPad;
+
+    // Peg rows occupy upper portion; bins/histogram lower portion.
+    const pegY0 = topPad + 20;
+    const pegY1 = topPad + boardH*0.55;
+
+    const ys = [];
+    for (let r=0;r<rows;r++){
+      const t = rows===1 ? 0 : r/(rows-1);
+      ys.push(pegY0 + t*(pegY1-pegY0));
+    }
+
+    const centerX = leftPad + boardW*0.5;
+    const xUnit = (boardW/(bins-1))/2; // one +/- step in "pos" units
+
+    const histY0 = topPad + boardH*0.60;
+    const histH = (H - histY0 - 30);
+
+    return {W,H,boardW,boardH,ys,centerX,xUnit,histY0,histH};
+  }
+
+  function setParamsFromUI(){
+    rows = +rowsEl.value;
+    p = +pEl.value;
+    rate = +rateEl.value;
+    bins = rows + 1;
+    if (counts.length !== bins) counts = new Array(bins).fill(0);
+    rowsVal.textContent = rows;
+    pVal.textContent = p.toFixed(2);
+    rateVal.textContent = rate;
+    emeanEl.textContent = (rows * p).toFixed(2);
+  }
+
+  function updateButtons(){
+    startBtn.disabled = running;
+    stopBtn.disabled = !running;
+  }
+
+  function reset(){
+    setParamsFromUI();
+    counts = new Array(bins).fill(0);
+    total = 0;
+    carry = 0;
+    balls.length = 0;
+    updateStats();
+    draw();
+  }
+
+  function updateStats(){
+    totalEl.textContent = total.toString();
+    if (total === 0) {
+      meanEl.textContent = '–';
+      return;
+    }
+    let s = 0;
+    for(let k=0;k<bins;k++) s += k*counts[k];
+    meanEl.textContent = (s/total).toFixed(2);
+  }
+
+  function spawnBall(){
+    const {ys,centerX,xUnit} = layout();
+    // Pre-sample decisions for animation; "pos" increments by +/-1 each row
+    const steps = new Array(rows);
+    let rights = 0;
+    for(let r=0;r<rows;r++){
+      const goRight = Math.random() < p;
+      steps[r] = goRight ? 1 : -1;
+      if (goRight) rights++;
+    }
+    const finalBin = rights; // Binomial(rows,p) outcome
+
+    const ball = {
+      x: centerX,
+      y: ys.length ? ys[0] - 35 : topPad,
+      vy: 0,
+      row: 0,
+      pos: 0,         // cumulative +/- steps
+      steps,
+      finalBin,
+      alive: true,
+    };
+
+    balls.push(ball);
+    // Cap active balls; if too many, drop oldest (but still count outcome)
+    while (balls.length > MAX_BALLS) balls.shift();
+  }
+
+  function landBall(ball){
+    counts[ball.finalBin]++;
+    total++;
+  }
+
+  function stepBall(ball, dt){
+    const g = 2200; // px/s^2
+    const {ys,centerX,xUnit,histY0} = layout();
+
+    ball.vy += g*dt;
+    ball.y += ball.vy*dt;
+
+    // Apply peg decisions when crossing each peg row y.
+    while (ball.row < rows && ball.y >= ys[ball.row]){
+      ball.pos += ball.steps[ball.row];
+      ball.row += 1;
+    }
+
+    // Set x based on cumulative pos.
+    ball.x = centerX + ball.pos * xUnit;
+
+    // When ball reaches histogram area, it "lands".
+    if (ball.y >= histY0 - 10){
+      ball.alive = false;
+      landBall(ball);
+      updateStats();
+    }
+  }
+
+  function dropMany(n){
+    for(let i=0;i<n;i++) spawnBall();
+  }
+
+  function draw(){
+    const {W,H,boardW,ys,centerX,xUnit,histY0,histH} = layout();
+    ctx.clearRect(0,0,W,H);
+
+    // Background
+    ctx.fillStyle = '#070a0e';
+    ctx.fillRect(0,0,W,H);
+
+    // Pegs (schematic)
+    ctx.globalAlpha = 0.75;
+    ctx.fillStyle = 'rgba(255,255,255,0.10)';
+    const pegR = 3;
+    for (let r=0;r<rows;r++){
+      const y = ys[r];
+      const nPegs = r+1;
+      for (let j=0;j<nPegs;j++){
+        const x = centerX + (j - (nPegs-1)/2) * (2*xUnit);
+        ctx.beginPath();
+        ctx.arc(x,y,pegR,0,Math.PI*2);
+        ctx.fill();
+      }
+    }
+    ctx.globalAlpha = 1;
+
+    // Balls
+    for (const b of balls){
+      if (!b.alive) continue;
+      ctx.fillStyle = 'rgba(255,255,255,0.90)';
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, 4.2, 0, Math.PI*2);
+      ctx.fill();
+    }
+
+    // Histogram
+    const maxC = Math.max(1, ...counts);
+    const barAreaH = histH;
+    const barW = boardW / bins;
+
+    for (let k=0;k<bins;k++){
+      const h = (counts[k]/maxC) * (barAreaH-10);
+      const x = leftPad + k*barW;
+      const y = histY0 + (barAreaH - h);
+      ctx.fillStyle = 'rgba(74,163,255,0.65)';
+      ctx.fillRect(x+2,y,Math.max(1,barW-4),h);
+    }
+
+    // Labels
+    ctx.fillStyle = 'rgba(255,255,255,0.65)';
+    ctx.font = '14px ui-sans-serif, system-ui';
+    ctx.fillText('Bins (0..rows)', leftPad, H-20);
+    ctx.fillText('Counts (scaled)', leftPad, histY0-8);
+
+    // Expected mean
+    const expMean = rows*p;
+    const xm = leftPad + (expMean+0.5)*barW;
+    ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(xm, histY0);
+    ctx.lineTo(xm, H-30);
+    ctx.stroke();
+
+    // Observed mean
+    if (total>0){
+      let s = 0;
+      for(let k=0;k<bins;k++) s += k*counts[k];
+      const m = s/total;
+      const xo = leftPad + (m+0.5)*barW;
+      ctx.strokeStyle = 'rgba(255,190,90,0.85)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(xo, histY0);
+      ctx.lineTo(xo, H-30);
+      ctx.stroke();
+    }
+
+    // Legend
+    ctx.fillStyle = 'rgba(255,255,255,0.75)';
+    ctx.fillText('white = expected mean', W-230, H-20);
+    ctx.fillStyle = 'rgba(255,190,90,0.85)';
+    ctx.fillText('orange = observed mean', W-230, H-40);
+  }
+
+  function tick(now){
+    const dt = Math.min(0.033, (now - lastT)/1000);
+    lastT = now;
+
+    // stream new balls
+    if (running){
+      carry += dt * rate;
+      const n = Math.floor(carry);
+      if (n>0){
+        carry -= n;
+        dropMany(n);
+      }
+    }
+
+    // advance balls
+    for (const b of balls){
+      if (!b.alive) continue;
+      stepBall(b, dt);
+    }
+
+    // prune landed balls
+    for (let i=balls.length-1;i>=0;i--){
+      if (!balls[i].alive) balls.splice(i,1);
+    }
+
+    draw();
+    requestAnimationFrame(tick);
+  }
+
+  rowsEl.addEventListener('input', () => { setParamsFromUI(); draw(); });
+  pEl.addEventListener('input', () => { setParamsFromUI(); draw(); });
+  rateEl.addEventListener('input', () => { setParamsFromUI(); });
+
+  startBtn.addEventListener('click', () => {
+    setParamsFromUI();
+    running = true;
+    updateButtons();
+  });
+
+  stopBtn.addEventListener('click', () => {
+    running = false;
+    updateButtons();
+  });
+
+  dropBtn.addEventListener('click', () => {
+    // Make batch deterministic: pause streaming and drop exactly n.
+    const wasRunning = running;
+    running = false;
+    updateButtons();
+
+    setParamsFromUI();
+    const n = Math.max(1, Math.min(20000, Math.floor(+batchEl.value || 1)));
+    dropMany(n);
+
+    // Don't auto-resume; user can hit Start again.
+    // (This fixes the "batch ignored" confusion when streaming was already running.)
+    if (wasRunning) carry = 0;
+  });
+
+  resetBtn.addEventListener('click', reset);
+
+  setParamsFromUI();
+  updateButtons();
+  reset();
+  requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>
