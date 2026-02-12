@@ -1,0 +1,760 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ChordTutor</title>
+  <style>
+    :root{
+      --bg:#0b0f14; --panel:#121a24; --text:#e8eef7; --muted:#9db0c6;
+      --accent:#6aa6ff; --good:#2bd576; --warn:#ffcc66; --bad:#ff6a6a;
+      --keyW: 44px; --keyH: 190px; --blackW: 28px; --blackH: 120px;
+    }
+    *{box-sizing:border-box}
+    body{margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; background:var(--bg); color:var(--text);}
+    header{padding:18px 20px; border-bottom:1px solid rgba(255,255,255,.08)}
+    header h1{margin:0; font-size:18px; letter-spacing:.2px}
+    header p{margin:6px 0 0; color:var(--muted); font-size:13px; line-height:1.3}
+    .wrap{max-width:1100px; margin:0 auto; padding:16px 20px 30px}
+    .row{display:flex; gap:14px; flex-wrap:wrap; align-items:flex-end}
+    .card{background:var(--panel); border:1px solid rgba(255,255,255,.08); border-radius:12px; padding:14px}
+    .controls{flex: 1 1 560px}
+    .status{flex: 1 1 280px}
+    label{display:block; font-size:12px; color:var(--muted); margin-bottom:6px}
+    select, button, input[type="range"]{
+      background:#0e141d; color:var(--text); border:1px solid rgba(255,255,255,.14);
+      border-radius:10px; padding:10px 12px; font-size:14px;
+    }
+    button{cursor:pointer}
+    button.primary{background:linear-gradient(180deg, rgba(106,166,255,.25), rgba(106,166,255,.10)); border-color:rgba(106,166,255,.35)}
+    button:disabled{opacity:.45; cursor:not-allowed}
+    .grid{display:grid; grid-template-columns: repeat(6, minmax(150px, 1fr)); gap:10px}
+    @media (max-width: 880px){ .grid{grid-template-columns: repeat(2, minmax(150px, 1fr));} }
+    .small{font-size:12px; color:var(--muted); line-height:1.35}
+
+    /* Piano */
+    .pianoWrap{margin-top:14px}
+    .piano{position:relative; height:var(--keyH); user-select:none;}
+    .whiteKeys{display:flex; height:100%}
+    .key.white{width:var(--keyW); height:100%; background:#f3f6fb; border:1px solid rgba(0,0,0,.25); border-bottom-left-radius:8px; border-bottom-right-radius:8px; position:relative}
+    .key.black{width:var(--blackW); height:var(--blackH); background:#10131a; border:1px solid rgba(255,255,255,.18); border-radius:0 0 6px 6px; position:absolute; top:0; z-index:3}
+    .key .lbl{position:absolute; bottom:8px; left:0; right:0; text-align:center; font-size:11px; color:rgba(0,0,0,.60)}
+    .key.black .lbl{color:rgba(255,255,255,.70)}
+    .key.white.active{background: #d9f1ff;}
+    .key.black.active{background: #2a4b7a;}
+    .key.white.chord{background: #c6ffd8;}
+    .key.black.chord{background: #1f6a49;}
+    .key.white.root{outline: 3px solid rgba(106,166,255,.95); outline-offset:-3px}
+    .key.black.root{outline: 3px solid rgba(106,166,255,.95); outline-offset:-3px}
+
+    .pill{display:inline-block; padding:6px 10px; border-radius:999px; font-size:12px; border:1px solid rgba(255,255,255,.14); color:var(--muted)}
+    .pill.good{color:rgba(43,213,118,.95); border-color:rgba(43,213,118,.35)}
+    .pill.warn{color:rgba(255,204,102,.95); border-color:rgba(255,204,102,.35)}
+
+    code{background: rgba(255,255,255,.06); padding:2px 6px; border-radius:8px}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>ChordTutor</h1>
+    <p>2 octaves of keys. Pick a root + chord quality. Highlights chord tones and plays via WebAudio, and optionally sends MIDI note-on/off if you select a MIDI output.</p>
+  </header>
+
+  <div class="wrap">
+    <div class="row">
+      <div class="card controls">
+        <div class="grid">
+          <div>
+            <label>Root</label>
+            <select id="root"></select>
+          </div>
+          <div>
+            <label>Chord</label>
+            <select id="quality"></select>
+          </div>
+          <div>
+            <label>Inversion</label>
+            <select id="inversion">
+              <option value="0">Root position</option>
+              <option value="1">1st inversion</option>
+              <option value="2">2nd inversion</option>
+              <option value="3">3rd inversion</option>
+            </select>
+          </div>
+          <div>
+            <label>Octave span</label>
+            <select id="span">
+              <option value="2" selected>2 octaves (C4–B5)</option>
+              <option value="3">3 octaves (C3–B5)</option>
+            </select>
+          </div>
+          <div>
+            <label>Tempo (strum)</label>
+            <input id="strum" type="range" min="0" max="160" value="35" />
+            <div class="small"><span id="strumVal">35</span> ms between chord tones</div>
+          </div>
+          <div>
+            <label>Gain</label>
+            <input id="gain" type="range" min="0" max="100" value="25" />
+            <div class="small"><span id="gainVal">0.25</span></div>
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:12px; align-items:center">
+          <button class="primary" id="play">Play chord</button>
+          <button id="stop">Stop</button>
+          <button id="arp">Arpeggiate up</button>
+          <button id="arpDown">Arpeggiate down</button>
+          <span class="pill" id="audioPill">Audio: idle</span>
+          <span class="pill" id="midiPill">MIDI: not connected</span>
+        </div>
+
+        <div style="margin-top:14px" class="card" id="seqCard">
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap">
+            <div><b>Sequence (up to 4 chord changes)</b></div>
+            <div class="small">Each slot uses its own root/quality/inversion. Uses the same strum and gain.</div>
+          </div>
+
+          <div style="margin-top:8px">
+            <label>Chord duration</label>
+            <input id="dur" type="range" min="300" max="2500" value="1100" />
+            <div class="small"><span id="durVal">1100</span> ms per chord</div>
+          </div>
+
+          <div id="seqRows" style="margin-top:10px; display:grid; grid-template-columns: 1fr; gap:8px"></div>
+
+          <div class="row" style="margin-top:10px; align-items:center">
+            <button class="primary" id="playSeq">Play sequence</button>
+            <button id="clearSeq">Clear sequence</button>
+          </div>
+        </div>
+
+        <div style="margin-top:12px" class="row">
+          <div style="flex:1 1 420px">
+            <label>MIDI output (optional)</label>
+            <select id="midiOut"><option value="">(none)</option></select>
+            <div class="small">If your browser supports WebMIDI (Chrome/Edge) you can route chord notes to a synth. We still play locally via WebAudio.</div>
+          </div>
+          <div style="flex:1 1 260px">
+            <label>Chord tones</label>
+            <div id="tones" class="small"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card status">
+        <div class="small">
+          <div><b>Tip:</b> click keys to audition single notes.</div>
+          <div style="margin-top:10px">This is a deliberately simple “basis”: chord tones are built from interval sets (semitones) + optional extensions. Some names overlap in practice; this is intended as a tutor/toy, not a full jazz theory engine.</div>
+          <div style="margin-top:10px">If you want: add a “scale mode” view (Ionian/Dorian/etc) or voicing presets (drop-2, quartal).</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card pianoWrap">
+      <div id="piano" class="piano">
+        <div id="whiteKeys" class="whiteKeys"></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  const NOTE_NAMES = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
+  const ENHARMONIC = {"Db":"C#","Eb":"D#","Gb":"F#","Ab":"G#","Bb":"A#"};
+
+  // Chord recipes (intervals in semitones from root)
+  // Keep it pragmatic: common spellings, not exhaustive.
+  const CHORDS = {
+    "Major triad": [0,4,7],
+    "Minor triad": [0,3,7],
+    "Diminished triad": [0,3,6],
+    "Augmented triad": [0,4,8],
+
+    "Maj7": [0,4,7,11],
+    "Min7": [0,3,7,10],
+    "Dominant 7": [0,4,7,10],
+    "Dim7": [0,3,6,9],
+    "Half-diminished 7 (m7b5)": [0,3,6,10],
+
+    "9 (dom9)": [0,4,7,10,14],
+    "Maj9": [0,4,7,11,14],
+    "Min9": [0,3,7,10,14],
+
+    "13 (dom13)": [0,4,7,10,14,17,21],
+    "Maj13": [0,4,7,11,14,17,21],
+    "Min13": [0,3,7,10,14,17,21],
+  };
+
+  // MIDI note number for C4
+  const C4 = 60;
+
+  // UI elements
+  const els = {
+    root: document.getElementById('root'),
+    quality: document.getElementById('quality'),
+    inversion: document.getElementById('inversion'),
+    span: document.getElementById('span'),
+    strum: document.getElementById('strum'),
+    strumVal: document.getElementById('strumVal'),
+    gain: document.getElementById('gain'),
+    gainVal: document.getElementById('gainVal'),
+    play: document.getElementById('play'),
+    stop: document.getElementById('stop'),
+    arp: document.getElementById('arp'),
+    arpDown: document.getElementById('arpDown'),
+    tones: document.getElementById('tones'),
+    audioPill: document.getElementById('audioPill'),
+    midiPill: document.getElementById('midiPill'),
+    midiOut: document.getElementById('midiOut'),
+    dur: document.getElementById('dur'),
+    durVal: document.getElementById('durVal'),
+    seqRows: document.getElementById('seqRows'),
+    playSeq: document.getElementById('playSeq'),
+    clearSeq: document.getElementById('clearSeq'),
+    piano: document.getElementById('piano'),
+    whiteKeys: document.getElementById('whiteKeys'),
+  };
+
+  // Populate selects
+  for (const n of NOTE_NAMES) {
+    const opt = document.createElement('option');
+    opt.value = n; opt.textContent = n;
+    els.root.appendChild(opt);
+  }
+  els.root.value = "C";
+
+  for (const [name] of Object.entries(CHORDS)) {
+    const opt = document.createElement('option');
+    opt.value = name; opt.textContent = name;
+    els.quality.appendChild(opt);
+  }
+  els.quality.value = "Dominant 7";
+
+  // Audio (simple poly synth)
+  let audioCtx = null;
+  let master = null;
+  let activeVoices = new Map(); // midi -> {osc,gain}
+
+  function ensureAudio() {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      master = audioCtx.createGain();
+      master.gain.value = parseFloat(els.gain.value) / 100;
+      master.connect(audioCtx.destination);
+    }
+    return audioCtx;
+  }
+
+  function midiToFreq(m) {
+    return 440 * Math.pow(2, (m - 69) / 12);
+  }
+
+  function noteOnAudio(midi, when=0) {
+    ensureAudio();
+    const t0 = audioCtx.currentTime + when;
+    if (activeVoices.has(midi)) return;
+
+    const osc = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(midiToFreq(midi), t0);
+
+    // simple attack/decay
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(0.9, t0 + 0.015);
+    g.gain.exponentialRampToValueAtTime(0.35, t0 + 0.12);
+
+    osc.connect(g);
+    g.connect(master);
+    osc.start(t0);
+
+    activeVoices.set(midi, {osc, g});
+  }
+
+  function noteOffAudio(midi, when=0) {
+    if (!audioCtx) return;
+    const voice = activeVoices.get(midi);
+    if (!voice) return;
+    const t0 = audioCtx.currentTime + when;
+    voice.g.gain.cancelScheduledValues(t0);
+    voice.g.gain.setValueAtTime(Math.max(voice.g.gain.value, 0.0001), t0);
+    voice.g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.18);
+    voice.osc.stop(t0 + 0.20);
+    activeVoices.delete(midi);
+  }
+
+  function allNotesOff() {
+    for (const midi of Array.from(activeVoices.keys())) noteOffAudio(midi, 0);
+    midiAllOff();
+    clearActiveKeys();
+  }
+
+  // MIDI
+  let midiAccess = null;
+  let midiOutput = null;
+
+  function midiSupported() {
+    return !!navigator.requestMIDIAccess;
+  }
+
+  async function initMIDI() {
+    if (!midiSupported()) {
+      els.midiPill.textContent = 'MIDI: unsupported';
+      els.midiPill.classList.add('warn');
+      return;
+    }
+
+    try {
+      midiAccess = await navigator.requestMIDIAccess();
+      els.midiPill.textContent = 'MIDI: available';
+      els.midiPill.classList.add('good');
+      refreshMIDIOutputs();
+
+      midiAccess.onstatechange = () => refreshMIDIOutputs();
+    } catch (e) {
+      els.midiPill.textContent = 'MIDI: blocked';
+      els.midiPill.classList.add('warn');
+    }
+  }
+
+  function refreshMIDIOutputs() {
+    const prev = els.midiOut.value;
+    els.midiOut.innerHTML = '<option value="">(none)</option>';
+    if (!midiAccess) return;
+
+    for (const output of midiAccess.outputs.values()) {
+      const opt = document.createElement('option');
+      opt.value = output.id;
+      opt.textContent = output.name;
+      els.midiOut.appendChild(opt);
+    }
+    els.midiOut.value = prev;
+    selectMIDIOutput(prev);
+  }
+
+  function selectMIDIOutput(id) {
+    midiOutput = null;
+    if (!midiAccess || !id) return;
+    for (const out of midiAccess.outputs.values()) {
+      if (out.id === id) midiOutput = out;
+    }
+  }
+
+  function midiNoteOn(midi, velocity=100, whenMs=0) {
+    if (!midiOutput) return;
+    const t = (window.performance.timeOrigin + window.performance.now()) + whenMs;
+    // WebMIDI timestamp is DOMHighResTimeStamp in ms; we can pass 0 for immediate.
+    midiOutput.send([0x90, midi & 0x7f, velocity & 0x7f], t);
+  }
+  function midiNoteOff(midi, whenMs=0) {
+    if (!midiOutput) return;
+    const t = (window.performance.timeOrigin + window.performance.now()) + whenMs;
+    midiOutput.send([0x80, midi & 0x7f, 0x00], t);
+  }
+  function midiAllOff() {
+    if (!midiOutput) return;
+    // CC 123: all notes off
+    midiOutput.send([0xB0, 123, 0]);
+  }
+
+  // Piano rendering (2 octaves by default)
+  // We'll render from C4 upward.
+  let keyEls = new Map(); // midi -> element
+  let currentChord = [];
+
+  function buildPiano(spanOctaves=2) {
+    keyEls.clear();
+    els.whiteKeys.innerHTML = '';
+
+    const startMidi = C4 - (spanOctaves === 3 ? 12 : 0); // C3 if 3 octaves
+    const totalSemis = spanOctaves * 12;
+
+    // White keys positions
+    const isBlack = (pc) => [1,3,6,8,10].includes(pc);
+
+    // Create white keys first to get layout.
+    const whiteMidis = [];
+    for (let i=0; i<totalSemis; i++) {
+      const midi = startMidi + i;
+      const pc = ((midi % 12) + 12) % 12;
+      if (!isBlack(pc)) whiteMidis.push(midi);
+    }
+
+    for (const midi of whiteMidis) {
+      const div = document.createElement('div');
+      div.className = 'key white';
+      div.dataset.midi = String(midi);
+      const pc = ((midi % 12) + 12) % 12;
+      const lbl = document.createElement('div');
+      lbl.className = 'lbl';
+      lbl.textContent = NOTE_NAMES[pc];
+      div.appendChild(lbl);
+      els.whiteKeys.appendChild(div);
+      keyEls.set(midi, div);
+
+      div.addEventListener('pointerdown', () => {
+        playSingle(midi);
+      });
+      div.addEventListener('pointerup', () => noteOffAudio(midi));
+      div.addEventListener('pointerleave', () => noteOffAudio(midi));
+    }
+
+    // Add black keys positioned over whites
+    const whiteIndexByMidi = new Map();
+    whiteMidis.forEach((m, idx) => whiteIndexByMidi.set(m, idx));
+
+    const pianoRect = els.piano.getBoundingClientRect();
+    // We'll compute positions based on white key width.
+    for (let i=0; i<totalSemis; i++) {
+      const midi = startMidi + i;
+      const pc = ((midi % 12) + 12) % 12;
+      if (!isBlack(pc)) continue;
+
+      // Place black key between surrounding whites. Use pattern offsets.
+      // We can find the previous white key midi by scanning downward.
+      let prevWhite = midi-1;
+      while (prevWhite >= startMidi && isBlack(((prevWhite%12)+12)%12)) prevWhite--;
+      const idx = whiteIndexByMidi.get(prevWhite);
+      if (idx === undefined) continue;
+
+      const div = document.createElement('div');
+      div.className = 'key black';
+      div.dataset.midi = String(midi);
+      const lbl = document.createElement('div');
+      lbl.className = 'lbl';
+      lbl.textContent = NOTE_NAMES[pc];
+      div.appendChild(lbl);
+
+      // Position: start at left edge of prev white + white width - blackWidth/2
+      const left = idx * parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--keyW'))
+                   + parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--keyW'))
+                   - parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--blackW'))/2;
+      div.style.left = `${left}px`;
+
+      els.piano.appendChild(div);
+      keyEls.set(midi, div);
+
+      div.addEventListener('pointerdown', (e) => {
+        e.stopPropagation();
+        playSingle(midi);
+      });
+      div.addEventListener('pointerup', () => noteOffAudio(midi));
+      div.addEventListener('pointerleave', () => noteOffAudio(midi));
+    }
+  }
+
+  function clearBlackKeys() {
+    // remove existing black keys
+    for (const el of Array.from(els.piano.querySelectorAll('.key.black'))) el.remove();
+  }
+
+  function clearActiveKeys() {
+    for (const el of keyEls.values()) el.classList.remove('active');
+  }
+
+  function clearChordHighlight() {
+    for (const el of keyEls.values()) {
+      el.classList.remove('chord');
+      el.classList.remove('root');
+    }
+  }
+
+  function playSingle(midi) {
+    noteOnAudio(midi);
+    midiNoteOn(midi, 92);
+    setTimeout(() => {
+      noteOffAudio(midi);
+      midiNoteOff(midi);
+    }, 450);
+
+    const el = keyEls.get(midi);
+    if (el) {
+      el.classList.add('active');
+      setTimeout(() => el.classList.remove('active'), 200);
+    }
+  }
+
+  function pcToName(pc) {
+    return NOTE_NAMES[((pc%12)+12)%12];
+  }
+
+  function nameToPc(name) {
+    const n = ENHARMONIC[name] || name;
+    return NOTE_NAMES.indexOf(n);
+  }
+
+  function getChordMidiNotesFrom(rootName, quality, inv, span) {
+    const rootPc = nameToPc(rootName);
+    const ints = CHORDS[quality] || [0,4,7];
+
+    let rootMidi = C4 + rootPc;
+    let notes = ints.map(semi => rootMidi + semi);
+
+    inv = Math.max(0, Math.min(inv, 3));
+    for (let i=0; i<inv; i++) {
+      const idx = i % notes.length;
+      notes[idx] += 12;
+    }
+    notes.sort((a,b)=>a-b);
+
+    const startMidi = C4 - (span === 3 ? 12 : 0);
+    const endMidi = startMidi + span*12 - 1;
+
+    notes = notes.map(m => {
+      while (m < startMidi) m += 12;
+      while (m > endMidi) m -= 12;
+      return m;
+    }).sort((a,b)=>a-b);
+
+    notes = Array.from(new Set(notes));
+    return { rootPc, notes, quality };
+  }
+
+  function highlightChord(notes, rootPc) {
+    clearChordHighlight();
+    for (const m of notes) {
+      const el = keyEls.get(m);
+      if (el) el.classList.add('chord');
+    }
+    const rootCandidates = notes.filter(m => (m % 12) === rootPc);
+    if (rootCandidates.length) {
+      const m = Math.min(...rootCandidates);
+      const el = keyEls.get(m);
+      if (el) el.classList.add('root');
+    }
+  }
+
+function getChordMidiNotes() {
+    const rootName = els.root.value;
+    const quality = els.quality.value;
+    const inv = parseInt(els.inversion.value, 10);
+    const span = parseInt(els.span.value, 10);
+    // rootMidi kept for legacy UI text; rootPc is what we need for highlighting
+    const rootMidi = C4 + nameToPc(rootName);
+    const out = getChordMidiNotesFrom(rootName, quality, inv, span);
+    return { rootMidi, notes: out.notes, quality };
+  }
+
+  function updateChordUI() {
+    const rootName = els.root.value;
+    const quality = els.quality.value;
+    const inv = parseInt(els.inversion.value, 10);
+    const span = parseInt(els.span.value, 10);
+
+    const { rootPc, notes } = getChordMidiNotesFrom(rootName, quality, inv, span);
+    currentChord = notes;
+
+    const toneNames = notes.map(m => pcToName(m % 12) + (Math.floor(m/12)-1));
+    els.tones.innerHTML = `<code>${toneNames.join('  ')}</code>`;
+
+    highlightChord(notes, rootPc);
+  }
+
+  function playChord(direction="together") {
+    ensureAudio();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+
+    const strumMs = parseInt(els.strum.value, 10);
+    const durMs = 900;
+
+    const notes = [...currentChord];
+    if (direction === 'down') notes.reverse();
+
+    notes.forEach((m, idx) => {
+      const w = (direction === 'together') ? 0 : (idx * strumMs)/1000;
+      const wMs = (direction === 'together') ? 0 : (idx * strumMs);
+      noteOnAudio(m, w);
+      midiNoteOn(m, 96, wMs);
+
+      const el = keyEls.get(m);
+      if (el) {
+        setTimeout(() => el.classList.add('active'), wMs);
+        setTimeout(() => el.classList.remove('active'), wMs + 180);
+      }
+
+      noteOffAudio(m, w + durMs/1000);
+      midiNoteOff(m, wMs + durMs);
+    });
+
+    els.audioPill.textContent = 'Audio: playing';
+    els.audioPill.classList.add('good');
+    setTimeout(() => {
+      els.audioPill.textContent = 'Audio: idle';
+      els.audioPill.classList.remove('good');
+    }, durMs + 200);
+  }
+
+  // Events
+  function rebuild() {
+    clearBlackKeys();
+    buildPiano(parseInt(els.span.value, 10));
+    updateChordUI();
+  }
+
+  els.root.addEventListener('change', updateChordUI);
+  els.quality.addEventListener('change', updateChordUI);
+  els.inversion.addEventListener('change', updateChordUI);
+  els.span.addEventListener('change', rebuild);
+
+  els.strum.addEventListener('input', () => {
+    els.strumVal.textContent = els.strum.value;
+  });
+
+  els.gain.addEventListener('input', () => {
+    els.gainVal.textContent = (parseFloat(els.gain.value)/100).toFixed(2);
+    els.durVal.textContent = els.dur.value;
+    if (master) master.gain.value = parseFloat(els.gain.value)/100;
+  });
+
+  els.play.addEventListener('click', () => { updateChordUI(); playChord('together'); });
+  els.arp.addEventListener('click', () => { updateChordUI(); playChord('up'); });
+  els.arpDown.addEventListener('click', () => { updateChordUI(); playChord('down'); });
+  els.stop.addEventListener('click', allNotesOff);
+
+  els.midiOut.addEventListener('change', () => selectMIDIOutput(els.midiOut.value));
+
+  // Init
+  
+    // Sequence rows
+    function makeSeqRow(i) {
+      const row = document.createElement('div');
+      row.style.display = 'grid';
+      row.style.gridTemplateColumns = '80px 1fr 1fr 130px';
+      row.style.gap = '8px';
+      row.style.alignItems = 'center';
+
+      const lbl = document.createElement('div');
+      lbl.className = 'pill';
+      lbl.textContent = `#${i+1}`;
+
+      const r = document.createElement('select');
+      r.id = `seq_root_${i}`;
+      for (const n of NOTE_NAMES) {
+        const opt = document.createElement('option');
+        opt.value = n; opt.textContent = n;
+        r.appendChild(opt);
+      }
+
+      const q = document.createElement('select');
+      q.id = `seq_quality_${i}`;
+      for (const [name] of Object.entries(CHORDS)) {
+        const opt = document.createElement('option');
+        opt.value = name; opt.textContent = name;
+        q.appendChild(opt);
+      }
+
+      const inv = document.createElement('select');
+      inv.id = `seq_inv_${i}`;
+      inv.innerHTML = `
+        <option value="">(skip)</option>
+        <option value="0">Root</option>
+        <option value="1">1st inv</option>
+        <option value="2">2nd inv</option>
+        <option value="3">3rd inv</option>
+      `;
+
+      // defaults
+      r.value = els.root.value;
+      q.value = els.quality.value;
+      inv.value = (i === 0) ? '0' : '';
+
+      row.appendChild(lbl);
+      row.appendChild(r);
+      row.appendChild(q);
+      row.appendChild(inv);
+      return row;
+    }
+
+    function initSequenceUI() {
+      els.seqRows.innerHTML = '';
+      for (let i=0; i<4; i++) els.seqRows.appendChild(makeSeqRow(i));
+    }
+
+    function readSequence() {
+      const span = parseInt(els.span.value, 10);
+      const seq = [];
+      for (let i=0; i<4; i++) {
+        const invEl = document.getElementById(`seq_inv_${i}`);
+        const invVal = invEl.value;
+        if (invVal === '') continue; // skip slot
+        const rootName = document.getElementById(`seq_root_${i}`).value;
+        const quality = document.getElementById(`seq_quality_${i}`).value;
+        const inv = parseInt(invVal, 10);
+        const { rootPc, notes } = getChordMidiNotesFrom(rootName, quality, inv, span);
+        seq.push({ rootPc, notes, rootName, quality, inv });
+      }
+      return seq;
+    }
+
+    function playChordScheduled(ch, startMs) {
+      const strumMs = parseInt(els.strum.value, 10);
+      const durMs = parseInt(els.dur.value, 10);
+      const direction = 'up';
+      const notes = [...ch.notes];
+
+      // schedule highlight
+      setTimeout(() => {
+        highlightChord(ch.notes, ch.rootPc);
+      }, startMs);
+
+      notes.forEach((m, idx) => {
+        const wMs = idx * strumMs;
+        const whenS = (startMs + wMs) / 1000;
+        noteOnAudio(m, whenS);
+        midiNoteOn(m, 96, startMs + wMs);
+
+        const el = keyEls.get(m);
+        if (el) {
+          setTimeout(() => el.classList.add('active'), startMs + wMs);
+          setTimeout(() => el.classList.remove('active'), startMs + wMs + 180);
+        }
+
+        noteOffAudio(m, whenS + durMs/1000);
+        midiNoteOff(m, startMs + wMs + durMs);
+      });
+
+      return startMs + durMs;
+    }
+
+    els.playSeq.addEventListener('click', () => {
+      ensureAudio();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      const seq = readSequence();
+      if (!seq.length) return;
+
+      allNotesOff();
+      let t = 0;
+      for (const ch of seq) {
+        t = playChordScheduled(ch, t + 30);
+      }
+
+      els.audioPill.textContent = 'Audio: playing';
+      els.audioPill.classList.add('good');
+      setTimeout(() => {
+        els.audioPill.textContent = 'Audio: idle';
+        els.audioPill.classList.remove('good');
+        // restore current chord highlight
+        updateChordUI();
+      }, t + 250);
+    });
+
+    els.clearSeq.addEventListener('click', () => {
+      initSequenceUI();
+    });
+
+    els.dur.addEventListener('input', () => {
+      els.durVal.textContent = els.dur.value;
+    });
+
+(function init(){
+    els.strumVal.textContent = els.strum.value;
+    els.gainVal.textContent = (parseFloat(els.gain.value)/100).toFixed(2);
+    els.durVal.textContent = els.dur.value;
+    rebuild();
+    initSequenceUI();
+    initMIDI();
+  })();
+</script>
+</body>
+</html>
