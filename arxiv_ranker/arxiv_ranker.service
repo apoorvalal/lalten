@@ -1,0 +1,14 @@
+[Unit]
+Description=Arxiv Ranker (Bluesky Paper Explorer) Web Application
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/lalten/arxiv_ranker
+EnvironmentFile=/etc/default/arxiv_ranker
+ExecStart=/snap/bin/uv run streamlit run bsky_paperbot/streamlit_app.py --server.port 8754 --server.address 127.0.0.1 --server.baseUrlPath /arxiv_methods_charts --server.headless true
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

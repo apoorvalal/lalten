@@ -18,6 +18,7 @@ nginx (443/HTTPS) → Path-based routing
 ├── /menu       → FastHTML app (port 8742) - Menu planner
 ├── /notes      → FastHTML app (port 8765) - Note-taking app
 ├── /radio      → FastHTML app (port 8750) - Web radio player with streaming proxy
+├── /arxiv_methods_charts → Streamlit app (port 8754) - Bluesky arXiv post engagement explorer
 └── /proxy      → Radio streaming endpoint (proxies to port 8750)
 ```
 
@@ -154,6 +155,7 @@ systemctl reload nginx
 - `8742` - menu app
 - `8743` - linkpull app
 - `8750` - radio app
+- `8754` - arxiv-ranker app
 - `8765` - notes app
 - `87XX` - future apps (choose next available)
 
@@ -249,4 +251,3 @@ This repo is now routinely updated by an assistant ("Krabbs") that can:
 - Do not commit secrets/credentials.
 - Prefer localhost-only app binds + nginx reverse proxy.
 - Keep generated artifacts (DBs, venvs) out of git via `.gitignore`.
-
