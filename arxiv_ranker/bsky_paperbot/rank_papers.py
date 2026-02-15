@@ -5,10 +5,8 @@ import sqlite3
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 from urllib.parse import urlparse
-
-from atproto import Client
 
 DEFAULT_DB_PATH = Path(__file__).with_name("paper_scores.db")
 
@@ -389,7 +387,7 @@ def _upsert_paper_scores_row(conn: sqlite3.Connection, actor: str, post: RankedP
 
 def _ingest_author_feed(
     conn: sqlite3.Connection,
-    client: Client,
+    client: Any,
     actor: str,
     stop_when_older_than: Optional[datetime] = None,
     stop_when_at_or_before: Optional[datetime] = None,
@@ -464,7 +462,10 @@ def sync_cache_for_window(
     password: str,
     start: datetime,
 ) -> SyncStats:
-    client = Client()
+    # Delay heavy atproto import until a sync is actually requested.
+    from atproto import Client
+
+    client: Any = Client()
     client.login(username, password)
 
     latest_synced = get_latest_synced_created_at(conn, actor)
@@ -567,6 +568,19 @@ def fetch_posts_cached(
         stats = sync_cache_for_window(conn, actor, username, password, start)
         posts = get_ranked_posts_for_window(conn, actor, start, end)
         return posts, stats
+    finally:
+        conn.close()
+
+
+def fetch_posts_from_cache(
+    actor: str,
+    start: datetime,
+    end: datetime,
+    db_path: Path = DEFAULT_DB_PATH,
+) -> list[RankedPost]:
+    conn = open_db(db_path)
+    try:
+        return get_ranked_posts_for_window(conn, actor, start, end)
     finally:
         conn.close()
 

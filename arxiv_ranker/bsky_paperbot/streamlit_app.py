@@ -5,7 +5,12 @@ from typing import Any
 import pandas as pd
 import streamlit as st
 
-from rank_papers import RankedPost, extract_title_and_authors, fetch_posts_cached
+from rank_papers import (
+    RankedPost,
+    extract_title_and_authors,
+    fetch_posts_cached,
+    fetch_posts_from_cache,
+)
 
 
 def at_uri_to_bsky_url(handle: str, at_uri: str) -> str:
@@ -19,6 +24,12 @@ def fetch_posts(
 ) -> list[RankedPost]:
     posts, _ = fetch_posts_cached(actor, username, password, start_dt, end_exclusive_dt)
     return posts
+
+
+def fetch_posts_from_local_cache(
+    actor: str, start_dt: datetime, end_exclusive_dt: datetime
+) -> list[RankedPost]:
+    return fetch_posts_from_cache(actor, start_dt, end_exclusive_dt)
 
 
 def build_table_rows(actor: str, posts: list[RankedPost]) -> list[dict[str, Any]]:
@@ -39,10 +50,10 @@ def build_table_rows(actor: str, posts: list[RankedPost]) -> list[dict[str, Any]
 
 
 def main() -> None:
-    st.set_page_config(page_title="PaperPosterBot Explorer", layout="wide")
-    st.title("PaperPosterBot Engagement Explorer")
+    st.set_page_config(page_title="bsky arxiv methods charts", layout="wide")
+    st.title("bsky arxiv methods charts")
     st.caption(
-        "Fetch papers posted on Bluesky and rank by likes, comments, reposts, quotes, or combined engagement."
+        "Fetch papers posted by paperposterbot within a time filter, sorted by engagement or timestamp."
     )
 
     today_utc = datetime.now(timezone.utc).date()
@@ -62,18 +73,11 @@ def main() -> None:
             index=0,
         )
         max_rows = st.number_input("Max rows to display", min_value=20, max_value=5000, value=20)
-        run_query = st.button("Fetch posts", type="primary", use_container_width=True)
+        run_sync = st.button("Sync now", type="primary", use_container_width=True)
 
     username = os.getenv("BSKYUSR", "")
     password = os.getenv("BSKYPWD", "")
 
-    if not run_query:
-        st.info("Set filters, then click 'Fetch posts'.")
-        return
-
-    if not username or not password:
-        st.error("Missing credentials. Set BSKYUSR and BSKYPWD in the environment.")
-        return
     if end_date < start_date:
         st.error("Invalid date range: end date must be on or after start date.")
         return
@@ -82,13 +86,36 @@ def main() -> None:
     end_exclusive_dt = datetime.combine(end_date + timedelta(days=1), time.min).replace(
         tzinfo=timezone.utc
     )
+    selected_key = f"{actor}|{start_dt.isoformat()}|{end_exclusive_dt.isoformat()}"
+    default_key = (
+        "paperposterbot.bsky.social|"
+        f"{datetime.combine(default_start, time.min).replace(tzinfo=timezone.utc).isoformat()}|"
+        f"{datetime.combine(today_utc + timedelta(days=1), time.min).replace(tzinfo=timezone.utc).isoformat()}"
+    )
+    last_synced_key = st.session_state.get("last_synced_key")
+    should_auto_sync = selected_key != default_key and last_synced_key != selected_key
+    should_sync = run_sync or should_auto_sync
 
-    with st.spinner("Fetching posts from Bluesky..."):
+    with st.spinner("Reading cached posts..."):
         try:
-            posts = fetch_posts(actor, username, password, start_dt, end_exclusive_dt)
-        except Exception as exc:  # Surface API/auth/network errors directly in UI
-            st.error(f"Failed to fetch posts: {exc}")
+            posts = fetch_posts_from_local_cache(actor, start_dt, end_exclusive_dt)
+        except Exception as exc:
+            st.error(f"Failed to read cache: {exc}")
             return
+
+    if should_sync:
+        if not username or not password:
+            st.error("Missing credentials. Set BSKYUSR and BSKYPWD in the environment.")
+            return
+        with st.spinner("Syncing from Bluesky..."):
+            try:
+                posts = fetch_posts(actor, username, password, start_dt, end_exclusive_dt)
+                st.session_state["last_synced_key"] = selected_key
+            except Exception as exc:  # Surface API/auth/network errors directly in UI
+                st.error(f"Failed to sync posts: {exc}")
+                return
+    elif selected_key == default_key:
+        st.caption("Showing cached results for the default 30-day window. Use 'Sync now' to refresh.")
 
     st.write(
         f"Window: `{start_dt.date().isoformat()}` to `{end_date.isoformat()}` (UTC, inclusive)  \n"
