@@ -169,54 +169,48 @@ with db.connect() as conn:
 # Schedule editor grid
 st.markdown("### Schedule")
 
-# Compute adjusted schedule preview based on the currently edited Actual times.
-ideal_list = [r["scheduled_time"] for r in schedule]
-
-# Pull in-progress edits (if any) from session state so the preview updates immediately.
-_state = st.session_state.get("daily_editor")
-actual_list = [(r.get("actual_time") or "") for r in schedule]
-if isinstance(_state, dict) and "edited_rows" in _state:
-    for idx_str, patch in (_state.get("edited_rows", {}) or {}).items():
-        try:
-            idx = int(idx_str)
-        except Exception:
-            continue
-        if 0 <= idx < len(actual_list) and "Actual" in patch:
-            actual_list[idx] = str(patch.get("Actual") or "")
-
-base_min, adj_min = compute_adjusted_schedule(ideal_list, actual_list)
-
-def _delta_str(a, b):
-    if a is None or b is None:
-        return ""
-    d = int(a - b)
-    sign = "+" if d > 0 else ""
-    return f"{sign}{d}m"
-
-
-df = pd.DataFrame(
+# Editor: enter Actual times + Notes
+editor_df = pd.DataFrame(
     [
         {
             "Label": r["label"],
             "Ideal": r["scheduled_time"],
-            "Adjusted": minutes_to_hhmm(adj_min[i]) if adj_min[i] is not None else r["scheduled_time"],
-            "Actual": actual_list[i] or "",
-            "Delta (Actual-Adjusted)": _delta_str(hhmm_to_minutes((actual_list[i] or "").strip()), adj_min[i]) if (actual_list[i] or "").strip() else "",
+            "Actual": r["actual_time"] or "",
             "Notes": r["notes"],
             "_template_id": r["template_id"],
         }
-        for i, r in enumerate(schedule)
+        for r in schedule
     ]
 )
 
 edited = st.data_editor(
-    df.drop(columns=["_template_id"]),
+    editor_df.drop(columns=["_template_id"]),
     use_container_width=True,
     num_rows="fixed",
     key="daily_editor",
-    disabled=["Label", "Ideal", "Adjusted", "Delta (Actual-Adjusted)"],
+    disabled=["Label", "Ideal"],
 )
 
+# Preview: propagate offsets forward based on the *current editor values* (no save needed)
+ideal_list = editor_df["Ideal"].tolist()
+actual_list = [str(x or "").strip() for x in edited["Actual"].tolist()]
+
+_, adj_min = compute_adjusted_schedule(ideal_list, actual_list)
+
+preview_df = pd.DataFrame(
+    [
+        {
+            "Label": editor_df.loc[i, "Label"],
+            "Ideal": editor_df.loc[i, "Ideal"],
+            "Adjusted": minutes_to_hhmm(adj_min[i]) if adj_min[i] is not None else editor_df.loc[i, "Ideal"],
+            "Actual": actual_list[i],
+        }
+        for i in range(len(editor_df))
+    ]
+)
+
+st.markdown("### Adjusted schedule (preview)")
+st.dataframe(preview_df, use_container_width=True, hide_index=True)
 # Persist any edits to Actual/Notes
 if st.button("Save daily changes", type="primary"):
     with db.connect() as conn:
