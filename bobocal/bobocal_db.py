@@ -54,7 +54,7 @@ def init_db():
                 feed_time TEXT NOT NULL, -- HH:MM
                 amount TEXT,
                 notes TEXT,
-                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                created_at TEXT NOT NULL DEFAULT (datetime(now))
             )
             """
         )
@@ -71,7 +71,7 @@ def init_db():
             CREATE TABLE IF NOT EXISTS archive_log (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 day TEXT NOT NULL,
-                archived_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                archived_at TEXT NOT NULL DEFAULT (datetime(now)),
                 md_path TEXT,
                 payload_json TEXT NOT NULL
             )
