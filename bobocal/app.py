@@ -112,9 +112,8 @@ st.set_page_config(page_title="bobocal", page_icon="🗓️", layout="wide")
 
 st.title("bobocal")
 
-# NOTE: Streamlit does not ship st.autorefresh.
-# If we want this later, we can add the third-party streamlit-autorefresh component.
-# For MVP we skip auto-refresh; the table recomputes on interaction/save.
+# Light auto-refresh for "live" offsets when entering times
+st.autorefresh(interval=30_000, key="autorefresh")
 
 with db.connect() as conn:
     db.init_db()
