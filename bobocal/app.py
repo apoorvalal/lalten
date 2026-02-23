@@ -48,38 +48,6 @@ def fmt_offset(mins):
     return f"{sign}{mins}m"
 
 
-def hhmm_to_minutes(s: str):
-    t = parse_hhmm(s)
-    if not t:
-        return None
-    return t.hour * 60 + t.minute
-
-
-def minutes_to_hhmm(m: int) -> str:
-    m = int(m) % (24 * 60)
-    return f"{m//60:02d}:{m%60:02d}"
-
-
-def compute_adjusted_schedule(ideal_hhmm, actual_hhmm):
-    # ideal_hhmm: list[str], actual_hhmm: list[str|""]
-    base = [hhmm_to_minutes(x) for x in ideal_hhmm]
-    adj = base[:]
-
-    # Apply forward offsets anchored at any row with an actual time.
-    for i, a in enumerate(actual_hhmm):
-        a = (a or "").strip()
-        if not a:
-            continue
-        am = hhmm_to_minutes(a)
-        if am is None or adj[i] is None:
-            continue
-        delta = am - adj[i]
-        for j in range(i, len(adj)):
-            adj[j] = adj[j] + delta
-
-    return base, adj
-
-
 def load_template_rows(conn):
     rows = conn.execute(
         "SELECT id, sort_order, label, scheduled_time FROM schedule_template ORDER BY sort_order"
@@ -169,43 +137,17 @@ with db.connect() as conn:
 # Schedule editor grid
 st.markdown("### Schedule")
 
-# Compute adjusted schedule preview based on the currently edited Actual times.
-ideal_list = [r["scheduled_time"] for r in schedule]
-
-# Pull in-progress edits (if any) from session state so the preview updates immediately.
-_state = st.session_state.get("daily_editor")
-actual_list = [(r.get("actual_time") or "") for r in schedule]
-if isinstance(_state, dict) and "edited_rows" in _state:
-    for idx_str, patch in (_state.get("edited_rows", {}) or {}).items():
-        try:
-            idx = int(idx_str)
-        except Exception:
-            continue
-        if 0 <= idx < len(actual_list) and "Actual" in patch:
-            actual_list[idx] = str(patch.get("Actual") or "")
-
-base_min, adj_min = compute_adjusted_schedule(ideal_list, actual_list)
-
-def _delta_str(a, b):
-    if a is None or b is None:
-        return ""
-    d = int(a - b)
-    sign = "+" if d > 0 else ""
-    return f"{sign}{d}m"
-
-
 df = pd.DataFrame(
     [
         {
             "Label": r["label"],
-            "Ideal": r["scheduled_time"],
-            "Adjusted": minutes_to_hhmm(adj_min[i]) if adj_min[i] is not None else r["scheduled_time"],
-            "Actual": actual_list[i] or "",
-            "Delta (Actual-Adjusted)": _delta_str(hhmm_to_minutes((actual_list[i] or "").strip()), adj_min[i]) if (actual_list[i] or "").strip() else "",
+            "Scheduled": r["scheduled_time"],
+            "Actual": r["actual_time"] or "",
+            "Offset": r["offset_str"],
             "Notes": r["notes"],
             "_template_id": r["template_id"],
         }
-        for i, r in enumerate(schedule)
+        for r in schedule
     ]
 )
 
@@ -214,7 +156,6 @@ edited = st.data_editor(
     use_container_width=True,
     num_rows="fixed",
     key="daily_editor",
-    disabled=["Label", "Ideal", "Adjusted", "Delta (Actual-Adjusted)"],
 )
 
 # Persist any edits to Actual/Notes
