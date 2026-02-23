@@ -1,0 +1,4 @@
+streamlit==1.42.2
+pandas==2.2.3
+jinja2==3.1.5
+python-dateutil==2.9.0.post0
