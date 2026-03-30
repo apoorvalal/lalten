@@ -1,0 +1,16 @@
+[Unit]
+Description=Regmi Search Web Application
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/lalten/regmi_search
+Environment="PORT=8755"
+Environment="HOST=127.0.0.1"
+Environment="REGMI_SEARCH_DATA_DIR=/root/lalten/regmi_search/data"
+ExecStart=/snap/bin/uv run python /root/lalten/regmi_search/main.py
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

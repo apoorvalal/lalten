@@ -217,6 +217,11 @@ systemctl disable <service_name>.service
 - `Host: $host`
 - `X-Real-IP: $remote_addr`
 
+**Regmi Research Search**:
+- Static UI and PDFs remain under `/pages/regmi_research_papers/`
+- Search API is proxied from `/pages/regmi_research_papers/api/` to `127.0.0.1:8755`
+- Backend service directory: `/root/lalten/regmi_search`
+
 ## Maintenance Notes
 
 ### SSL Certificate Renewal
@@ -232,6 +237,11 @@ When making changes, update this document and note:
 2. Date of change
 3. Files affected
 4. Any required service restarts
+
+### 2026-03-30 Search Deployment
+- Change description: Added a hybrid Regmi archive search page with regex and semantic search.
+- Files affected: `/root/lalten/pages/regmi_research_papers/index.html`, `/root/lalten/regmi_search/main.py`, `/root/lalten/regmi_search/pyproject.toml`, `/root/lalten/regmi_search/regmi_search.service`, `/root/lalten/regmi_search/data/*`, `/etc/nginx/sites-available/lalten.org`, `/root/lalten/nginx.conf`, `/root/lalten/README.md`
+- Required service restarts: `systemctl restart regmi_search.service`, `systemctl reload nginx`
 
 
 
