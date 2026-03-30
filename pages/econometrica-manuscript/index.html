@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Illuminated Econometrics Manuscript</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=UnifrakturCook:wght@700&family=Cormorant+Garamond:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <style>
+    :root {
+      --paper: #e5cf9b;
+      --ink: #2b1d12;
+      --muted: #6d5631;
+      --ruby: #76171b;
+      --gold: #c8a043;
+      --blue: #21467f;
+      --green: #2d5c30;
+    }
+    html, body { margin: 0; background: #17110d; color: var(--ink); font-family: "Cormorant Garamond", Georgia, serif; }
+    body {
+      padding: 10px;
+      background:
+        radial-gradient(circle at 15% 12%, rgba(255,220,150,0.11), transparent 22%),
+        radial-gradient(circle at 85% 20%, rgba(255,235,190,0.06), transparent 20%),
+        linear-gradient(180deg, #211712, #15100d 78%);
+    }
+    .toolbar {
+      width: min(1480px, calc(100vw - 20px));
+      margin: 0 auto 8px;
+      color: #d9c7ad;
+      font: 12px/1.35 system-ui, sans-serif;
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    button {
+      appearance: none; border: 1px solid rgba(255,220,160,0.3); background: rgba(255,248,232,0.08);
+      color: #f1dfc6; border-radius: 999px; padding: 6px 12px; cursor: pointer; font: inherit;
+    }
+    #frame {
+      width: min(1320px, calc(100vw - 20px));
+      aspect-ratio: 4 / 3;
+      margin: 0 auto;
+      position: relative;
+      background: var(--paper);
+      border-radius: 18px;
+      overflow: hidden;
+      box-shadow: 0 24px 80px rgba(0,0,0,0.42);
+    }
+    #frame::before {
+      content: "";
+      position: absolute; inset: 0;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.08), rgba(80,40,10,0.08)),
+        repeating-linear-gradient(90deg, rgba(120,90,45,0.025) 0 1px, transparent 1px 16px),
+        repeating-linear-gradient(180deg, rgba(120,90,45,0.012) 0 1px, transparent 1px 22px);
+      pointer-events: none;
+    }
+    #stage { position: absolute; inset: 0; overflow: hidden; }
+    .rule-outer, .rule-inner, .rule-mid {
+      position: absolute; inset: 12px; border: 6px solid var(--ruby); pointer-events: none;
+    }
+    .rule-mid { inset: 24px; border-width: 2px; border-color: var(--gold); }
+    .rule-inner { inset: 32px; border-width: 1px; border-color: #6c5324; }
+    .title, .subtitle, .line, .rubric, .footer, .katex-block, .badge, .dropcap, .note {
+      position: absolute; white-space: pre; user-select: none;
+    }
+    .title { font: 700 30px/1 "UnifrakturCook", serif; color: #5a1215; z-index: 5; }
+    .subtitle { font: 600 11px/1.1 "Cormorant Garamond", serif; color: var(--muted); z-index: 5; }
+    .line { font: 500 11.6px/1 "Cormorant Garamond", serif; color: var(--ink); z-index: 4; }
+    .rubric { font: 700 10px/1 "Cormorant Garamond", serif; color: #6c1418; z-index: 6; }
+    .dropcap {
+      font: 700 62px/1 "UnifrakturCook", serif; color: #f7e6b6; width: 62px; height: 78px;
+      background: var(--ruby); border: 3px solid var(--gold); text-align: center; line-height: 71px; z-index: 8;
+    }
+    .katex-block {
+      color: var(--ink); background: rgba(114, 32, 27, 0.07); border: 1.2px solid #9c7a34;
+      padding: 5px 9px 7px; z-index: 6; min-width: 150px;
+    }
+    .katex-block .katex { font-size: 0.78em; }
+    .badge {
+      border: 1.2px solid rgba(198,154,56,0.75); color: var(--blue); border-radius: 999px; padding: 2px 7px;
+      font: 700 11px/1 "Cormorant Garamond", serif; z-index: 7; background: rgba(255,246,220,0.34); pointer-events: none;
+    }
+    .vine { position: absolute; width: 26px; z-index: 8; pointer-events: none; opacity: 0.94; }
+    .footer { font: 600 10px/1 "Cormorant Garamond", serif; color: #6c5530; z-index: 5; }
+    .note { font: 700 10px/1 "Cormorant Garamond", serif; color: #1f3f73; z-index: 7; }
+    .illumination {
+      position: absolute;
+      z-index: 9;
+      pointer-events: none;
+      opacity: 0.98;
+      filter: drop-shadow(0 0 10px rgba(198,154,56,0.18));
+    }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <div>Compressed illuminated digest of <em>Does Regression Produce Representative Causal Rankings?</em>. Inline moving diagrams reflow text in real time.</div>
+    <button id="reroll">Reroll motion</button>
+  </div>
+  <div id="frame"><div id="stage"><div class="rule-outer"></div><div class="rule-mid"></div><div class="rule-inner"></div></div></div>
+
+  <script type="module">
+    import { prepareWithSegments, layoutNextLine } from './layout.js'
+
+    const stage = document.getElementById('stage')
+    const reroll = document.getElementById('reroll')
+    const title = Object.assign(document.createElement('div'), { className: 'title', textContent: 'De Inversione Ordinis Causalis' })
+    const subtitle = Object.assign(document.createElement('div'), { className: 'subtitle', textContent: 'illuminated digest of “Does Regression Produce Representative Causal Rankings?” (arXiv:2411.02675)' })
+    const dropcap = Object.assign(document.createElement('div'), { className: 'dropcap', textContent: 'T' })
+    const rubric = Object.assign(document.createElement('div'), { className: 'rubric', textContent: 'PROPOSITIO CENTRALIS' })
+    const note = Object.assign(document.createElement('div'), { className: 'note', textContent: 'Moving right-angle, tangent, and loss-function illuminations below are inline obstacles.' })
+    const footerLeft = Object.assign(document.createElement('div'), { className: 'footer', textContent: 'folio xxvii recto · rank reversal under overlap weighting' })
+    const footerRight = Object.assign(document.createElement('div'), { className: 'footer', textContent: 'Apoorva Lal et al. · arXiv:2411.02675' })
+    ;[title, subtitle, dropcap, rubric, note, footerLeft, footerRight].forEach(el => stage.appendChild(el))
+
+    const eq1 = document.createElement('div'), eq2 = document.createElement('div')
+    ;[eq1, eq2].forEach(el => { el.className = 'katex-block'; stage.appendChild(el) })
+
+    const badges = ['WATE', 'ATE', 'AIPW'].map(t => {
+      const el = document.createElement('div'); el.className = 'badge'; el.textContent = t; stage.appendChild(el); return el
+    })
+
+    const lineEls = Array.from({ length: 180 }, () => {
+      const el = document.createElement('div'); el.className = 'line'; stage.appendChild(el); return el
+    })
+
+    const vines = Array.from({ length: 2 }, () => {
+      const el = document.createElement('div'); el.className = 'vine'; stage.appendChild(el); return el
+    })
+
+    const illums = Array.from({ length: 4 }, () => {
+      const el = document.createElement('div'); el.className = 'illumination'; stage.appendChild(el); return el
+    })
+
+    const PAGE = { w: 1320, h: 990 }
+    const text = `This paper asks whether regression-based rankings preserve the true ordering of treatment effects. Under treatment-effect heterogeneity, the partially linear model does not generally estimate the ATE. It estimates an overlap-weighted average. That change in estimand can itself reverse the ranking. One may have ATE_j > ATE_k while simultaneously obtaining WATE_j < WATE_k.
+
+The source of the distortion is covariance between treatment effects and the implicit overlap weights gamma_j(X). If high-gain strata for one treatment lie where overlap is thick while another treatment’s gains sit in low-overlap regions, the regression reallocates honor and may invert the ordering. Thus the pathology is not merely one of level, but one of order: the estimator may crown the wrong prince.
+
+The paper’s contribution is to formalize this rank-reversal phenomenon and derive a necessary and sufficient condition under the partially linear model. The result reveals that reversals require substantial heterogeneity together with covariance terms of opposing sign across treatments. The danger is therefore structured rather than mystical. Similar propensity distributions, modest heterogeneity, and common-signed covariance patterns all make reversals less likely.
+
+The numerical example in the paper is deliberately vivid. Two treatments may have true average effects ordered one way, yet the regression-implied overlap weighting can drag the estimated coefficients into the opposite order. AIPW, by contrast, continues to recover the ATE ranking. The contrast matters because practitioners often use PLM or regression-style causal estimates operationally, not just ceremonially: they rank ads, interventions, and product actions, then push resources toward the apparent winners.
+
+What the manuscript insists upon is that estimands are not decorative labels. The regression coefficient is not merely “the effect” wearing slightly different clothes. Under heterogeneity it is a weighted object, and the weights are endogenous to overlap. Therefore a ranking built from those coefficients is a ranking of WATEs, not necessarily a ranking of ATEs. If the decision target is the latter, then the former may be a polished but misleading surrogate.
+
+This is where the covariance logic bites. For treatment j, the gap between WATE_j and ATE_j is governed by how the treatment effect co-moves with gamma_j(X). If large gains live in high-overlap regions, the regression magnifies them. If large gains live in low-overlap regions, the regression muffles them. Because each treatment can exhibit a different covariance pattern, pairwise orderings are not protected. One treatment’s gains can be amplified while another’s are suppressed.
+
+The paper also clarifies when the nightmare is less likely. If propensity-score distributions are broadly similar across treatments, if heterogeneity is modest, or if selection-on-gains pushes the covariance terms in a common direction, then the risk of inversion shrinks. But these are empirical features to be examined, not consoling incantations to be assumed. The responsible reader must inspect whether the weighting geometry of the problem aligns with the ranking task at hand.
+
+The practical lesson is severe. A coefficient can be perfectly lawful as a WATE while still being treacherous for decision-making if the decision-maker actually wants ATE rankings. Where treatment ranking matters, and especially where effects vary sharply with covariates, doubly robust estimators such as AIPW are safer because they target the average effect itself rather than a hidden overlap-weighted proxy.
+
+In that sense the paper is a warning about estimands disguised as coefficients. Regression does not merely summarize data; it chooses what parts of the covariate space to listen to most closely. If the score is loudest in the wrong strata, the ranking may be beautiful, stable, and entirely wrong.
+
+So the manuscript closes with a monkishly simple admonition. Before ranking treatments, ask what object your estimator converges to. Before trusting an ordering, ask whether the weighting scheme preserves the ordering you care about. And before worshipping a coefficient, ask whether it names the right estimand or only a plausible impostor.`
+    const prepared = prepareWithSegments(text, '11.6px "Cormorant Garamond"', { whiteSpace: 'pre-wrap' })
+
+    let seed = Math.random() * 1000
+    let t0 = performance.now()
+
+    function katexify() {
+      if (!window.katex) return false
+      window.katex.render(String.raw`\operatorname{plim}\,\hat\tau_j = \mathbb{E}[\gamma_j(X)\tau_j(X)]`, eq1, { throwOnError: false, displayMode: true })
+      window.katex.render(String.raw`\mathrm{ATE}_j > \mathrm{ATE}_k \quad \not\Rightarrow \quad \mathrm{WATE}_j > \mathrm{WATE}_k`, eq2, { throwOnError: false, displayMode: true })
+      return true
+    }
+
+    function mkVine(el, x, y, h, phase) {
+      el.innerHTML = `<svg viewBox="0 0 26 ${h}" width="26" height="${h}" xmlns="http://www.w3.org/2000/svg"><path d="M12 0 C18 20, 18 38, 8 54 C2 64, 3 80, 14 96 C20 106, 20 122, 10 138 C3 148, 4 164, 14 182" fill="none" stroke="#2d5c30" stroke-width="2.1"/><circle cx="13" cy="${24 + 8*Math.sin(phase)}" r="4" fill="#c8a043"/><circle cx="10" cy="${92 + 7*Math.cos(phase*0.9)}" r="3.6" fill="#c8a043"/><circle cx="13" cy="${160 + 7*Math.sin(phase*1.2)}" r="4" fill="#c8a043"/></svg>`
+      el.style.left = x + 'px'; el.style.top = y + 'px'; el.style.height = h + 'px'
+    }
+
+    function circleBand(cx, cy, r, top, bottom) {
+      if (top >= cy + r || bottom <= cy - r) return null
+      const minDy = cy >= top && cy <= bottom ? 0 : cy < top ? top - cy : cy - bottom
+      if (minDy >= r) return null
+      const dx = Math.sqrt(Math.max(0, r*r - minDy*minDy))
+      return { left: cx - dx - 5, right: cx + dx + 5 }
+    }
+
+    function rectBand(x, y, w, h, top, bottom) {
+      if (bottom <= y || top >= y + h) return null
+      return { left: x - 4, right: x + w + 4 }
+    }
+
+    function carve(base, blocked) {
+      let slots = [base]
+      for (const interval of blocked) {
+        const next = []
+        for (const slot of slots) {
+          if (interval.right <= slot.left || interval.left >= slot.right) { next.push(slot); continue }
+          if (interval.left > slot.left) next.push({ left: slot.left, right: interval.left })
+          if (interval.right < slot.right) next.push({ left: interval.right, right: slot.right })
+        }
+        slots = next
+      }
+      return slots.filter(s => s.right - s.left > 55)
+    }
+
+    function obstacleState(elapsed) {
+      const t = elapsed * 0.001
+      return [
+        { type: 'circle', x: 330 + 90*Math.sin(t*1.1 + seed*0.1), y: 392 + 40*Math.cos(t*1.7), r: 44 },
+        { type: 'rect', x: 660 + 110*Math.cos(t*0.9 + 0.7), y: 548 + 34*Math.sin(t*1.4), w: 146, h: 102 },
+        { type: 'circle', x: 920 + 82*Math.sin(t*1.5 + 0.5), y: 740 + 30*Math.cos(t*1.2 + seed*0.03), r: 48 },
+        { type: 'rect', x: 250 + 90*Math.cos(t*1.3 + 0.2), y: 760 + 24*Math.sin(t*1.1 + 0.4), w: 124, h: 86 },
+      ]
+    }
+
+    function renderIllumination(el, obs, kind, elapsed) {
+      if (kind === 'triangle') {
+        const size = obs.r * 2
+        el.style.left = (obs.x - obs.r) + 'px'; el.style.top = (obs.y - obs.r) + 'px'; el.style.width = size + 'px'; el.style.height = size + 'px'
+        el.innerHTML = `<svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="${obs.r}" cy="${obs.r}" r="${obs.r-2}" fill="rgba(255,232,170,0.72)" stroke="#c8a043" stroke-width="2"/>
+          <path d="M16 ${size-18} L16 18 L${size-18} ${size-18} Z" fill="none" stroke="#21467f" stroke-width="2.6"/>
+          <rect x="16" y="${size-31}" width="13" height="13" fill="none" stroke="#76171b" stroke-width="1.8"/>
+          <line x1="16" y1="18" x2="${size-18}" y2="${size-18}" stroke="#2d5c30" stroke-width="1.8"/>
+        </svg>`
+      } else if (kind === 'tangent') {
+        el.style.left = obs.x + 'px'; el.style.top = obs.y + 'px'; el.style.width = obs.w + 'px'; el.style.height = obs.h + 'px'
+        const phase = elapsed * 0.003
+        el.innerHTML = `<svg viewBox="0 0 ${obs.w} ${obs.h}" width="${obs.w}" height="${obs.h}" xmlns="http://www.w3.org/2000/svg">
+          <rect x="1.5" y="1.5" width="${obs.w-3}" height="${obs.h-3}" rx="10" fill="rgba(255,236,184,0.56)" stroke="#c8a043" stroke-width="2"/>
+          <path d="M8 ${obs.h-18} C28 ${obs.h-28}, 54 ${obs.h-52}, ${obs.w-10} 16" fill="none" stroke="#21467f" stroke-width="2.6"/>
+          <line x1="34" y1="${obs.h-46}" x2="${obs.w-4}" y2="${18 + 5*Math.sin(phase)}" stroke="#76171b" stroke-width="2.2"/>
+          <circle cx="34" cy="${obs.h-46}" r="4" fill="#2d5c30"/>
+        </svg>`
+      } else if (kind === 'bars') {
+        el.style.left = obs.x + 'px'; el.style.top = obs.y + 'px'; el.style.width = obs.w + 'px'; el.style.height = obs.h + 'px'
+        const phase = elapsed * 0.0024
+        const h1 = 24 + 10*Math.sin(phase)
+        const h2 = 42 + 8*Math.cos(phase*1.2)
+        const h3 = 58 + 12*Math.sin(phase*0.8 + 0.7)
+        el.innerHTML = `<svg viewBox="0 0 ${obs.w} ${obs.h}" width="${obs.w}" height="${obs.h}" xmlns="http://www.w3.org/2000/svg">
+          <rect x="1.5" y="1.5" width="${obs.w-3}" height="${obs.h-3}" rx="10" fill="rgba(255,236,184,0.56)" stroke="#c8a043" stroke-width="2"/>
+          <line x1="16" y1="${obs.h-16}" x2="${obs.w-12}" y2="${obs.h-16}" stroke="#21467f" stroke-width="1.8"/>
+          <rect x="20" y="${obs.h-16-h1}" width="16" height="${h1}" fill="#21467f" opacity="0.88"/>
+          <rect x="48" y="${obs.h-16-h2}" width="16" height="${h2}" fill="#2d5c30" opacity="0.88"/>
+          <rect x="76" y="${obs.h-16-h3}" width="16" height="${h3}" fill="#76171b" opacity="0.88"/>
+        </svg>`
+      } else if (kind === 'loss') {
+        const size = obs.r * 2
+        el.style.left = (obs.x - obs.r) + 'px'; el.style.top = (obs.y - obs.r) + 'px'; el.style.width = size + 'px'; el.style.height = size + 'px'
+        const phase = elapsed * 0.002
+        el.innerHTML = `<svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="${obs.r}" cy="${obs.r}" r="${obs.r-2}" fill="rgba(255,232,170,0.72)" stroke="#c8a043" stroke-width="2"/>
+          <path d="M12 ${size-12} Q ${obs.r} ${18 + 6*Math.sin(phase)} ${size-12} ${size-18}" fill="none" stroke="#21467f" stroke-width="2.8"/>
+          <line x1="${obs.r}" y1="${22 + 6*Math.sin(phase)}" x2="${size-12}" y2="${obs.r-6}" stroke="#76171b" stroke-width="2"/>
+          <circle cx="${obs.r}" cy="${22 + 6*Math.sin(phase)}" r="4" fill="#2d5c30"/>
+        </svg>`
+      }
+    }
+
+    function layoutPage(elapsed) {
+      title.style.left = '102px'; title.style.top = '34px'
+      subtitle.style.left = '102px'; subtitle.style.top = '72px'
+      dropcap.style.left = '44px'; dropcap.style.top = '26px'
+      note.style.left = '650px'; note.style.top = '36px'
+      rubric.style.left = '44px'; rubric.style.top = '146px'
+      eq1.style.left = '88px'; eq1.style.top = '170px'; eq1.style.width = '430px'
+      eq2.style.left = '720px'; eq2.style.top = '170px'; eq2.style.width = '500px'
+      footerLeft.style.left = '42px'; footerLeft.style.top = '966px'
+      footerRight.style.left = '1010px'; footerRight.style.top = '966px'
+      badges[0].style.left = '1180px'; badges[0].style.top = '500px'
+      badges[1].style.left = '1180px'; badges[1].style.top = '572px'
+      badges[2].style.left = '1180px'; badges[2].style.top = '648px'
+
+      mkVine(vines[0], 30, 132, 420, elapsed*0.001)
+      mkVine(vines[1], 1260, 150, 400, elapsed*0.0013)
+
+      const obs = obstacleState(elapsed)
+      renderIllumination(illums[0], obs[0], 'triangle', elapsed)
+      renderIllumination(illums[1], obs[1], 'tangent', elapsed)
+      renderIllumination(illums[2], obs[2], 'loss', elapsed)
+      renderIllumination(illums[3], obs[3], 'bars', elapsed)
+
+      let cursor = { segmentIndex: 0, graphemeIndex: 0 }
+      let lineIndex = 0
+      let y = 270
+      const bottom = 930
+      const leftBase = { left: 40, right: 1160 }
+
+      while (y < bottom && lineIndex < lineEls.length) {
+        const top = y - 10, bottomBand = y + 6
+        const blocked = []
+        if (y < 340) blocked.push({ left: 40, right: 96 })
+        for (const o of obs) {
+          const interval = o.type === 'rect'
+            ? rectBand(o.x, o.y, o.w, o.h, top, bottomBand)
+            : circleBand(o.x, o.y, o.r, top, bottomBand)
+          if (interval) blocked.push(interval)
+        }
+        const slots = carve(leftBase, blocked).sort((a,b)=>a.left-b.left)
+        if (!slots.length) { y += 14; continue }
+        for (const slot of slots) {
+          const line = layoutNextLine(prepared, cursor, slot.right - slot.left)
+          if (!line) break
+          const el = lineEls[lineIndex++]
+          el.style.display = 'block'
+          el.style.left = slot.left + 'px'
+          el.style.top = y + 'px'
+          el.textContent = line.text
+          cursor = line.end
+          if (cursor.segmentIndex >= prepared.segments.length) break
+        }
+        if (cursor.segmentIndex >= prepared.segments.length) break
+        y += 13
+      }
+      for (; lineIndex < lineEls.length; lineIndex++) lineEls[lineIndex].style.display = 'none'
+    }
+
+    function resize() {
+      const rect = document.getElementById('frame').getBoundingClientRect()
+      const scale = rect.width / PAGE.w
+      stage.style.transformOrigin = 'top left'
+      stage.style.transform = `scale(${scale})`
+      stage.style.width = PAGE.w + 'px'
+      stage.style.height = PAGE.h + 'px'
+    }
+
+    function loop(ts) {
+      layoutPage(ts - t0)
+      requestAnimationFrame(loop)
+    }
+
+    reroll.addEventListener('click', () => { seed = Math.random() * 1000; t0 = performance.now() })
+    window.addEventListener('resize', resize)
+    resize()
+    const timer = setInterval(() => { if (katexify()) clearInterval(timer) }, 80)
+    requestAnimationFrame(loop)
+  </script>
+</body>
+</html>

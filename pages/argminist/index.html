@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Argminist</title>
+  <style>
+    :root {
+      --bg: #0b0f14;
+      --panel: rgba(11, 15, 20, 0.82);
+      --ink: #e7f1ff;
+      --muted: #9bb2c9;
+      --accent: #7cf3c8;
+      --danger: #ff7a7a;
+      --curve: #86b7ff;
+      --min: #ffd166;
+      --grid: rgba(255,255,255,0.06);
+    }
+    html, body {
+      margin: 0;
+      height: 100%;
+      background: radial-gradient(circle at top, #121b26 0%, var(--bg) 62%);
+      color: var(--ink);
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      overflow: hidden;
+    }
+    canvas { display: block; width: 100vw; height: 100vh; }
+    .hud, .victory {
+      position: fixed;
+      left: 16px;
+      right: 16px;
+      pointer-events: none;
+    }
+    .hud {
+      top: 16px;
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: flex-start;
+    }
+    .card {
+      background: var(--panel);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 14px;
+      padding: 12px 14px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+      max-width: min(540px, 75vw);
+    }
+    .title { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+    .sub { color: var(--muted); font-size: 14px; line-height: 1.35; }
+    .victory {
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+    .victory.show { display: flex; }
+    .victory .box {
+      pointer-events: none;
+      background: rgba(10, 14, 18, 0.9);
+      border: 1px solid rgba(124,243,200,0.35);
+      color: var(--ink);
+      border-radius: 20px;
+      padding: 22px 26px;
+      text-align: center;
+      box-shadow: 0 18px 60px rgba(0,0,0,0.45);
+      max-width: 540px;
+    }
+    .victory h1 {
+      margin: 0 0 8px;
+      color: var(--accent);
+      font-size: 34px;
+    }
+    .victory p { margin: 0; color: var(--muted); font-size: 16px; }
+    .kbd {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.18);
+      background: rgba(255,255,255,0.06);
+      color: var(--ink);
+      font-size: 13px;
+      transform: translateY(-1px);
+    }
+  </style>
+</head>
+<body>
+  <canvas id="game"></canvas>
+  <div class="hud">
+    <div class="card">
+      <div class="title">Argminist</div>
+      <div class="sub">Move with <span class="kbd">←</span> and <span class="kbd">→</span>. Find the bottom of the random function. Press <span class="kbd">R</span> for a new function.</div>
+    </div>
+    <div class="card" id="stats"></div>
+  </div>
+  <div class="victory" id="victory">
+    <div class="box">
+      <h1>Victory</h1>
+      <p>You found the argmin. Press <span class="kbd">R</span> for another cursed objective.</p>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+    const stats = document.getElementById('stats');
+    const victoryEl = document.getElementById('victory');
+    const playerImage = new Image();
+    playerImage.src = './argminist-player.webp';
+
+    const state = {
+      keys: new Set(),
+      playerX: 0,
+      playerVX: 0,
+      fn: null,
+      world: { minX: -6, maxX: 6 },
+      won: false,
+      ready: false,
+      lastT: 0,
+    };
+
+    function resize() {
+      const dpr = Math.max(1, window.devicePixelRatio || 1);
+      canvas.width = Math.floor(window.innerWidth * dpr);
+      canvas.height = Math.floor(window.innerHeight * dpr);
+      canvas.style.width = window.innerWidth + 'px';
+      canvas.style.height = window.innerHeight + 'px';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    function rand(a, b) { return a + Math.random() * (b - a); }
+
+    function makeFunction() {
+      const c = rand(-3.5, 3.5);
+      const bowl = rand(0.015, 0.05);
+      const skew = rand(-0.012, 0.012);
+      const knots = Array.from({ length: 9 }, () => rand(state.world.minX + 0.5, state.world.maxX - 0.5)).sort((a, b) => a - b);
+      const hatCoeffs = knots.map((_, i) => {
+        const sign = Math.random() < 0.5 ? -1 : 1;
+        return sign * rand(0.18, 0.6) * (i % 2 === 0 ? 1.0 : 1.35);
+      });
+      const hingeCoeffs = knots.map(() => (Math.random() < 0.5 ? -1 : 1) * rand(0.02, 0.09));
+      const absFreq = rand(2.8, 5.6);
+      const absAmp = rand(0.08, 0.22);
+      const sawFreq = rand(3.5, 7.0);
+      const sawAmp = rand(0.04, 0.14);
+      const phase1 = rand(0, Math.PI * 2);
+      const phase2 = rand(0, Math.PI * 2);
+      const waveAmp = rand(0.03, 0.08);
+
+      const relu = z => Math.max(0, z);
+      const hat = (x, k, width) => Math.max(0, 1 - Math.abs(x - k) / width);
+      const saw = z => 2 * ((z / (2 * Math.PI)) - Math.floor(0.5 + z / (2 * Math.PI)));
+
+      const raw = x => {
+        let y = bowl * (x - c) ** 2 + skew * (x - c) ** 3;
+        for (let i = 0; i < knots.length; i++) {
+          const width = i % 2 === 0 ? 0.7 : 1.25;
+          y += hatCoeffs[i] * hat(x, knots[i], width);
+          y += hingeCoeffs[i] * relu(x - knots[i]);
+        }
+        y += absAmp * Math.abs(Math.sin(absFreq * x + phase1));
+        y += sawAmp * saw(sawFreq * x + phase2);
+        y += waveAmp * Math.sin(8.0 * x + phase1 * 0.7);
+        y += 0.05 * Math.cos(13.0 * x + phase2 * 1.2);
+        return y;
+      };
+
+      const samples = [];
+      let minY = Infinity, maxY = -Infinity, argminX = c;
+      for (let i = 0; i <= 2400; i++) {
+        const x = state.world.minX + (state.world.maxX - state.world.minX) * i / 2400;
+        const y = raw(x);
+        samples.push([x, y]);
+        if (y < minY) { minY = y; argminX = x; }
+        if (y > maxY) maxY = y;
+      }
+      const pad = Math.max(0.9, (maxY - minY) * 0.3);
+      return { raw, samples, minY, maxY, argminX, yLo: minY - pad * 0.45, yHi: maxY + pad };
+    }
+
+    function resetGame() {
+      state.fn = makeFunction();
+      state.playerX = rand(state.world.minX + 0.75, state.world.maxX - 0.75);
+      state.playerVX = 0;
+      state.won = false;
+      victoryEl.classList.remove('show');
+      state.ready = true;
+    }
+
+    function worldToScreen(x, y) {
+      const margin = 60;
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      const sx = margin + (x - state.world.minX) / (state.world.maxX - state.world.minX) * (w - margin * 2);
+      const sy = h - margin - (y - state.fn.yLo) / (state.fn.yHi - state.fn.yLo) * (h - margin * 2);
+      return [sx, sy];
+    }
+
+    function drawGrid() {
+      const w = window.innerWidth, h = window.innerHeight;
+      ctx.save();
+      ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+      ctx.lineWidth = 1;
+      for (let i = 0; i <= 10; i++) {
+        const x = i * w / 10;
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+      }
+      for (let i = 0; i <= 6; i++) {
+        const y = i * h / 6;
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function drawFunction() {
+      ctx.save();
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = '#86b7ff';
+      ctx.shadowBlur = 16;
+      ctx.shadowColor = 'rgba(134,183,255,0.28)';
+      ctx.beginPath();
+      state.fn.samples.forEach(([x, y], i) => {
+        const [sx, sy] = worldToScreen(x, y);
+        if (i === 0) ctx.moveTo(sx, sy); else ctx.lineTo(sx, sy);
+      });
+      ctx.stroke();
+      ctx.restore();
+
+      const [mx, my] = worldToScreen(state.fn.argminX, state.fn.minY);
+      ctx.save();
+      ctx.fillStyle = '#ffd166';
+      ctx.beginPath();
+      ctx.arc(mx, my, 7, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,209,102,0.35)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(mx, my, 16, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawPlayer() {
+      const y = state.fn.raw(state.playerX);
+      const [sx, sy] = worldToScreen(state.playerX, y);
+      const size = 58;
+      if (playerImage.complete) {
+        ctx.drawImage(playerImage, sx - size / 2, sy - size + 8, size, size);
+      } else {
+        ctx.fillStyle = '#ff7a7a';
+        ctx.beginPath();
+        ctx.arc(sx, sy - 16, 18, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.save();
+      ctx.fillStyle = 'rgba(124,243,200,0.85)';
+      ctx.beginPath();
+      ctx.arc(sx, sy + 4, 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function update(dt) {
+      const accel = state.won ? 0 : 12;
+      const maxSpeed = 3.5;
+      if (state.keys.has('ArrowLeft')) state.playerVX -= accel * dt;
+      if (state.keys.has('ArrowRight')) state.playerVX += accel * dt;
+      state.playerVX *= Math.pow(0.0006, dt);
+      state.playerVX = Math.max(-maxSpeed, Math.min(maxSpeed, state.playerVX));
+      state.playerX += state.playerVX * dt;
+      state.playerX = Math.max(state.world.minX, Math.min(state.world.maxX, state.playerX));
+      if (Math.abs(state.playerX - state.fn.argminX) < 0.09 && !state.won) {
+        state.won = true;
+        victoryEl.classList.add('show');
+      }
+      stats.innerHTML = `
+        <div class="title">Level stats</div>
+        <div class="sub">
+          x = ${state.playerX.toFixed(2)}<br>
+          argmin ≈ ${state.fn.argminX.toFixed(2)}<br>
+          gap = ${Math.abs(state.playerX - state.fn.argminX).toFixed(3)}
+        </div>`;
+    }
+
+    function render() {
+      ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+      drawGrid();
+      drawFunction();
+      drawPlayer();
+    }
+
+    function loop(t) {
+      const dt = Math.min(0.033, (t - (state.lastT || t)) / 1000);
+      state.lastT = t;
+      if (state.ready) {
+        update(dt);
+        render();
+      }
+      requestAnimationFrame(loop);
+    }
+
+    window.addEventListener('keydown', e => {
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        state.keys.add(e.key);
+        e.preventDefault();
+      }
+      if (e.key.toLowerCase() === 'r') resetGame();
+    });
+    window.addEventListener('keyup', e => state.keys.delete(e.key));
+    window.addEventListener('resize', resize);
+
+    resize();
+    resetGame();
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>

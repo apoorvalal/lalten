@@ -1,0 +1,275 @@
+---
+title: "Simulation Study: MSE of Fixed Effects Regression with Two Adoption Cohorts"
+format:
+  html:
+    embed-resources: true
+    page-layout: full
+    toc: true
+    number-sections: true
+    code-fold: true
+execute:
+  echo: true
+  warning: false
+  message: false
+jupyter: python3
+---
+
+## Setup
+
+This note studies the mean squared error of a two-way fixed effects regression,
+
+$$
+y_{it} = \alpha_i + \lambda_t + \beta D_{it} + u_{it},
+$$
+
+when treatment effects are heterogeneous across cohorts and over event time. The
+panel has two adoption cohorts plus a never-treated group:
+
+- One third of units adopt in period 3.
+- One third of units adopt in period 6.
+- One third are never treated.
+
+The MSE target is the average treatment effect over treated observations in each
+simulated panel,
+
+$$
+\operatorname{ATT}^{\text{treated cells}} = \mathbb{E}[\tau_{it} \mid D_{it} = 1].
+$$
+
+```{python}
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+
+from pyfixest.estimation import feols
+
+plt.style.use("seaborn-v0_8-whitegrid")
+pd.set_option("display.precision", 3)
+
+SEED = 20260315
+N_REP = 200
+N_UNITS = 180
+N_PERIODS = 10
+EARLY_COHORT = 3
+LATE_COHORT = 6
+NEVER_TREATED = 999
+
+
+def tau_it(event_time: int, cohort: int, severity: str) -> float:
+    early = int(cohort == EARLY_COHORT)
+    if severity == "mild":
+        return 1.00 + 0.15 * early + 0.10 * event_time + 0.05 * early * event_time
+    if severity == "severe":
+        return 0.50 + 1.25 * early + 0.35 * event_time + 0.30 * early * event_time
+    raise ValueError(f"Unknown severity: {severity}")
+
+
+def make_panel(seed: int, severity: str) -> pd.DataFrame:
+    rng = np.random.default_rng(seed)
+
+    cohort = np.full(N_UNITS, NEVER_TREATED, dtype=int)
+    cohort[: N_UNITS // 3] = EARLY_COHORT
+    cohort[N_UNITS // 3 : 2 * N_UNITS // 3] = LATE_COHORT
+    rng.shuffle(cohort)
+
+    unit_fe = rng.normal(loc=0.0, scale=1.0, size=N_UNITS)
+    time_fe = np.linspace(-0.4, 0.4, N_PERIODS) + rng.normal(0.0, 0.08, N_PERIODS)
+
+    rows = []
+    for unit in range(N_UNITS):
+        g = cohort[unit]
+        for time in range(N_PERIODS):
+            treated = int(g != NEVER_TREATED and time >= g)
+            event_time = time - g if g != NEVER_TREATED else -999
+            effect = tau_it(event_time, g, severity) if treated else 0.0
+            untreated = unit_fe[unit] + time_fe[time] + rng.normal(0.0, 1.0)
+            rows.append(
+                {
+                    "unit": unit,
+                    "time": time,
+                    "cohort": g,
+                    "treated": treated,
+                    "tau": effect,
+                    "y": untreated + effect,
+                }
+            )
+
+    return pd.DataFrame(rows)
+
+
+def fit_twfe(panel: pd.DataFrame) -> float:
+    fit = feols("y ~ treated | unit + time", data=panel)
+    return float(fit.coef().loc["treated"])
+
+
+def run_simulation(n_rep: int = N_REP) -> pd.DataFrame:
+    records = []
+    for severity in ["mild", "severe"]:
+        for rep in range(n_rep):
+            panel = make_panel(seed=SEED + rep, severity=severity)
+            beta_hat = fit_twfe(panel)
+            true_att = panel.loc[panel["treated"] == 1, "tau"].mean()
+            records.append(
+                {
+                    "severity": severity,
+                    "rep": rep,
+                    "beta_hat": beta_hat,
+                    "true_att": true_att,
+                    "error": beta_hat - true_att,
+                    "sq_error": (beta_hat - true_att) ** 2,
+                }
+            )
+
+    return pd.DataFrame(records)
+
+
+def summarize_results(results: pd.DataFrame) -> pd.DataFrame:
+    rows = []
+    for severity, group in results.groupby("severity", sort=False):
+        mean_beta = group["beta_hat"].mean()
+        mean_truth = group["true_att"].mean()
+        bias = group["error"].mean()
+        variance = np.mean((group["beta_hat"] - mean_beta) ** 2)
+        mse = group["sq_error"].mean()
+        rows.append(
+            {
+                "scenario": severity.title(),
+                "true_att": mean_truth,
+                "mean_beta": mean_beta,
+                "bias": bias,
+                "variance": variance,
+                "bias_sq": bias**2,
+                "mse": mse,
+                "rmse": np.sqrt(mse),
+            }
+        )
+
+    return pd.DataFrame(rows)
+
+
+def effect_profile() -> pd.DataFrame:
+    rows = []
+    for severity in ["mild", "severe"]:
+        for cohort in [EARLY_COHORT, LATE_COHORT]:
+            max_event = N_PERIODS - cohort - 1
+            for event_time in range(max_event + 1):
+                rows.append(
+                    {
+                        "severity": severity.title(),
+                        "cohort": f"Adopt in t={cohort}",
+                        "event_time": event_time,
+                        "tau": tau_it(event_time, cohort, severity),
+                    }
+                )
+
+    return pd.DataFrame(rows)
+
+
+results = run_simulation()
+summary = summarize_results(results)
+profile = effect_profile()
+summary.round(3)
+```
+
+## Design
+
+The untreated outcome satisfies
+
+$$
+y_{it}(0) = \alpha_i + \lambda_t + \varepsilon_{it},
+$$
+
+with independent unit effects, time effects, and noise. The two scenarios differ
+only in the treatment effect path:
+
+- Mild heterogeneity: treatment effects differ modestly across cohorts and rise
+  gradually with event time.
+- Severe heterogeneity: the early cohort receives substantially larger and more
+  rapidly growing effects than the late cohort.
+
+```{python}
+fig, axes = plt.subplots(1, 2, figsize=(10, 4), sharey=True)
+palette = {"Adopt in t=3": "#1b9e77", "Adopt in t=6": "#d95f02"}
+
+for ax, severity in zip(axes, ["Mild", "Severe"]):
+    subset = profile.loc[profile["severity"] == severity]
+    for cohort, group in subset.groupby("cohort", sort=False):
+        ax.plot(
+            group["event_time"],
+            group["tau"],
+            marker="o",
+            linewidth=2,
+            color=palette[cohort],
+            label=cohort,
+        )
+    ax.set_title(f"{severity} heterogeneity")
+    ax.set_xlabel("Event time")
+    ax.set_ylabel("Treatment effect")
+    ax.legend(frameon=True)
+
+fig.suptitle("Treatment effect paths by cohort", y=1.03, fontsize=14)
+fig.tight_layout()
+plt.show()
+```
+
+## Results
+
+The table below reports the average TWFE coefficient, its bias relative to the
+treated-cell ATT, the sampling variance of the estimator, and the resulting MSE.
+
+```{python}
+summary.round(3)
+```
+
+```{python}
+fig, axes = plt.subplots(1, 2, figsize=(11, 4.5))
+colors = {"Mild": "#4c78a8", "Severe": "#e45756"}
+
+error_data = [
+    results.loc[results["severity"] == "mild", "error"],
+    results.loc[results["severity"] == "severe", "error"],
+]
+
+box = axes[0].boxplot(
+    error_data,
+    tick_labels=["Mild", "Severe"],
+    patch_artist=True,
+    widths=0.6,
+)
+for patch, label in zip(box["boxes"], ["Mild", "Severe"]):
+    patch.set_facecolor(colors[label])
+    patch.set_alpha(0.7)
+axes[0].axhline(0.0, color="black", linestyle="--", linewidth=1)
+axes[0].set_title("Estimation error across replications")
+axes[0].set_ylabel(r"$\hat{\beta} - \mathrm{ATT}$")
+
+x = np.arange(len(summary))
+axes[1].bar(x, summary["bias_sq"], color="#f28e2b", label="Bias squared")
+axes[1].bar(
+    x,
+    summary["variance"],
+    bottom=summary["bias_sq"],
+    color="#76b7b2",
+    label="Variance",
+)
+axes[1].set_xticks(x, summary["scenario"])
+axes[1].set_title("MSE decomposition")
+axes[1].set_ylabel("Contribution to MSE")
+axes[1].legend(frameon=True)
+
+fig.tight_layout()
+plt.show()
+```
+
+Under mild heterogeneity, the TWFE coefficient is still downward biased for the
+average treated-cell effect, but the distortion is limited. Under severe
+heterogeneity, the same regression misses the target by much more, and the MSE
+increase is driven mainly by bias rather than variance.
+
+## Takeaway
+
+With two adoption cohorts, a simple fixed effects regression can have acceptable
+MSE when effect heterogeneity is mild, but its performance deteriorates quickly
+when cohort-specific and dynamic treatment effects diverge sharply. In this
+simulation, the main issue is not noise; it is that the TWFE estimand moves away
+from the average causal effect of interest as heterogeneity becomes stronger.
