@@ -1,263 +1,142 @@
 # lalten
-bare metal website repo. High-level steps for setup: 
 
-1. get a small vps (~raspberry pi housed in some rural shed). Hetzner's go for the price of a coffee.
-2. (optional) buy a domain on namecheap and point the VPS's IP address at the domain.
-3. host index.html and webapps on the VPS and access it either via the ip address or the domain name. For example, check out my radio player at [this](https://lalten.org/radio) link. 
+Personal website + tiny app host for **lalten.org**.
 
-## Architecture
+This repo is the deployment/control plane for the Hetzner box. It contains:
+- nginx config
+- app source for selected deployed services
+- systemd unit files (kept in-repo, symlinked into `/etc/systemd/system/`)
+- static pages under `/root/lalten/pages/`
+- small app directories under `/root/lalten/<app>/` or `/root/lalten/apps/<app>/`
 
-Personal/family website at **lalten.org** hosting static pages and FastHTML web applications. Each app is a self-contained, single-file Python application served via nginx reverse proxy.
+## Core rule
 
-### Deployment Pattern
+`/root/lalten/` is the **single source of truth** for deployed app code, nginx config, and systemd service definitions.
 
+Do **not** hand-edit live copies under `/etc/nginx/...` or `/etc/systemd/system/...` except to maintain symlinks into this repo.
+
+## Current architecture
+
+At a high level:
+
+```text
+nginx (HTTPS on lalten.org)
+├── static root                -> /var/www/html
+├── /pages/                    -> /root/lalten/pages/
+├── /misc/                     -> /root/lalten/misc/
+├── reverse-proxied app routes -> localhost ports
+└── static app aliases         -> app-specific directories
 ```
-nginx (443/HTTPS) → Path-based routing
-├── /           → Static landing page (/var/www/html/index.html)
-├── /pages/     → Static file directory (/root/lalten/pages/)
-├── /menu       → FastHTML app (port 8742) - Menu planner
-├── /notes      → FastHTML app (port 8765) - Note-taking app
-├── /radio      → FastHTML app (port 8750) - Web radio player with streaming proxy
-├── /arxiv_methods_charts → Streamlit app (port 8754) - Bluesky arXiv post engagement explorer
-└── /proxy      → Radio streaming endpoint (proxies to port 8750)
-```
 
-## Generalized Recipe for New CRUD Apps
+## Live routes
 
-### 1. Create App Directory Structure
+### Static / alias-backed
+- `/pages/` → `/root/lalten/pages/`
+- `/misc/` → `/root/lalten/misc/`
+- `/galton/` → static app in `/root/lalten/galton/`
+- `/chordtutor/` → static app in `/root/lalten/chordtutor/`
 
+### Reverse-proxied apps
+- `/notes/` → `127.0.0.1:8765`
+- `/menu/` → `127.0.0.1:8742`
+- `/linkpull/` → `127.0.0.1:8743`
+- `/radio/` and `/proxy` → `127.0.0.1:8750`
+- `/parenting` → `127.0.0.1:8751`
+- `/daylight/` → `127.0.0.1:8752`
+- `/KrustyTheKrabs/` → `127.0.0.1:8753`
+- `/arxiv_methods_charts/` → `127.0.0.1:8754`
+- `/pages/regmi_research_papers/api/` → `127.0.0.1:8755`
+- `/jot/` → `127.0.0.1:3210`
+
+## Important deployed paths
+
+### Main nginx config
+- Repo path: `/root/lalten/nginx.conf`
+- System path should be a symlink target from nginx's enabled site config.
+
+### Static pages
+- Directory: `/root/lalten/pages/`
+- Files dropped here are served immediately at:
+  - `https://lalten.org/pages/<filename>`
+
+### Jot
+- App source: `/root/lalten/apps/jot`
+- Persistent data: `/root/lalten/data/jot`
+- Service file in repo: `/root/lalten/jot.service`
+- Public URL: `https://lalten.org/jot/`
+- Notes:
+  - This is a vendored deploy copy of upstream `https://github.com/badlogic/jot`
+  - It is **not** a traditional GitHub fork
+  - It has a local base-path patch so it can live under `/jot/`
+  - See `apps/jot/DEPLOY.md`
+
+### Regmi research search
+- Backend app: `/root/lalten/regmi_search`
+- Public search API path: `/pages/regmi_research_papers/api/`
+
+## Deployment patterns
+
+### 1. Static page/app
+Use this for one-file or mostly-static HTML/JS/CSS projects.
+
+- Put assets under `/root/lalten/pages/` for simple static publishing, or
+- create an app directory under `/root/lalten/<app>/` and add an nginx alias route if you want a dedicated prettier path.
+
+No service restart is needed for plain `/pages/` content.
+
+### 2. Reverse-proxied app
+Use this for FastHTML, Streamlit, Node, or other long-running services.
+
+General pattern:
+1. add app code under `/root/lalten/<app>/` or `/root/lalten/apps/<app>/`
+2. add a service file **in this repo**
+3. symlink the service file into `/etc/systemd/system/`
+4. add an nginx location block in `/root/lalten/nginx.conf`
+5. run `nginx -t`
+6. restart/reload nginx and the service
+
+### 3. Data directories
+Persistent state should generally live outside the app working tree when convenient, e.g.
+- `/root/lalten/data/<app>/`
+
+This keeps updates cleaner and makes backup policy more obvious.
+
+## Services and operations
+
+### Inspect service status
 ```bash
-mkdir /root/lalten/<app_name>
-cd /root/lalten/<app_name>
-uv venv
-source .venv/bin/activate
-uv pip install python-fasthtml
-uv pip freeze > requirements.txt
+systemctl status <service>.service
 ```
 
-### 2. Write `main.py` (Template)
-
-```python
-from fasthtml.common import *
-
-# Initialize database
-db = database('<app_name>.db')
-items = db.t.items
-if items not in db.t:
-    items.create(id=int, content=str, created_at=str, pk='id')
-Item = items.dataclass()
-
-# Create app
-app, rt = fast_app()
-
-@rt('/')
-def get():
-    all_items = items(order_by='id DESC')
-
-    form = Form(
-        Textarea(name='content', placeholder='Enter item...', rows=4,
-                style='width: 100%; padding: 8px; margin-bottom: 10px;'),
-        Button('Add Item', type='submit',
-               style='padding: 8px 16px; background-color: #007bff; color: white; border: none; cursor: pointer;'),
-        method='post', action='/<app_name>/add', style='width: 100%;'
-    )
-
-    items_list = Div(
-        *[Div(
-            P(Strong(f"Item #{item.id}"), style='margin: 0; color: #666; font-size: 0.9em;'),
-            P(item.content, style='margin: 10px 0;'),
-            Div(
-                Form(Button('Delete', type='submit',
-                           style='padding: 4px 12px; background-color: #dc3545; color: white; border: none; cursor: pointer;'),
-                    method='post', action=f'/<app_name>/delete/{item.id}', style='display: inline;'),
-                style='display: flex; gap: 8px;'
-            ),
-            style='border: 1px solid #ddd; padding: 15px; margin-bottom: 15px; border-radius: 5px; background-color: #f9f9f9;'
-        ) for item in all_items],
-        style='margin-top: 20px;'
-    )
-
-    return Titled('App Title', form, items_list,
-                 style='max-width: 1000px; margin: 0 auto; padding: 20px; font-family: Arial, sans-serif;')
-
-@rt('/add', methods=['post'])
-def post(content: str):
-    from datetime import datetime
-    if content.strip():
-        items.insert(content=content, created_at=datetime.now().isoformat())
-    return RedirectResponse('/<app_name>', status_code=303)
-
-@rt('/delete/{item_id}', methods=['post'])
-def delete(item_id: int):
-    items.delete(item_id)
-    return RedirectResponse('/<app_name>', status_code=303)
-
-serve(host='0.0.0.0', port=<unique_port>)
-```
-
-### 3. Create Systemd Service
-
-Create `<app_name>.service` file in the app directory:
-
-```ini
-[Unit]
-Description=<App Name> Web Application
-After=network.target
-
-[Service]
-Type=simple
-User=root
-WorkingDirectory=/root/lalten/<app_name>
-ExecStart=/snap/bin/uv run python /root/lalten/<app_name>/main.py
-Restart=always
-
-[Install]
-WantedBy=multi-user.target
-```
-
-Symlink and enable:
+### Follow logs
 ```bash
-# Create symlink (keeps service file in git repo)
-sudo ln -s /root/lalten/<app_name>/<app_name>.service /etc/systemd/system/<app_name>.service
-
-# Enable and start
-sudo systemctl daemon-reload
-sudo systemctl enable <app_name>.service
-sudo systemctl start <app_name>.service
+journalctl -u <service>.service -f
 ```
 
-### 4. Configure Nginx
-
-Add to `/etc/nginx/sites-available/lalten.org` (inside the main server block):
-
-```nginx
-location /<app_name>/ {
-    proxy_pass http://127.0.0.1:<port>/;
-    proxy_set_header Host $host;
-    proxy_set_header X-Real-IP $remote_addr;
-}
-
-location = /<app_name> {
-    proxy_pass http://127.0.0.1:<port>/;
-    proxy_set_header Host $host;
-    proxy_set_header X-Real-IP $remote_addr;
-}
+### Restart after code changes
+```bash
+systemctl restart <service>.service
 ```
 
-Reload nginx:
+### Validate and reload nginx
 ```bash
 nginx -t
 systemctl reload nginx
 ```
 
-### 5. Port Allocation
+## Documentation rule for future deploys
 
-- `8742` - menu app
-- `8743` - linkpull app
-- `8750` - radio app
-- `8754` - arxiv-ranker app
-- `8765` - notes app
-- `87XX` - future apps (choose next available)
+Whenever a **new app or deployment path** is added to this server:
+1. update this root `README.md` to mention it,
+2. document deployment-specific details in the relevant app subdirectory (for example `DEPLOY.md`), and
+3. **ask Apoorva whether to commit/push**, rather than silently assuming that part.
 
-### 6. Managing Services
+## Notes on assistant-managed deploys
 
-All webapps run as systemd services and start automatically on boot. Service files are stored in each app's directory and symlinked to `/etc/systemd/system/`.
+Krabbs can:
+- add static pages to `/pages/`
+- deploy small Python/Node apps behind nginx
+- maintain repo-local nginx + service definitions
+- publish digest-like artifacts to KrustyTheKrabs
 
-**View service status:**
-```bash
-systemctl status menu.service notes.service linkpull.service radio.service
-```
-
-**Restart a service (after code changes):**
-```bash
-systemctl restart <service_name>.service
-```
-
-**View logs:**
-```bash
-journalctl -u <service_name>.service -f
-```
-
-**Stop/disable a service:**
-```bash
-systemctl stop <service_name>.service
-systemctl disable <service_name>.service
-```
-
-## Tech Stack
-
-- **Framework**: FastHTML (Python web framework with HTMX)
-- **Database**: SQLite with FastHTML ORM helpers
-- **Styling**: Pico CSS (CDN) + inline styles
-- **Server**: Nginx reverse proxy
-- **Process Management**: systemd services
-
-## Configuration Summary
-
-> **Note**: This section of the document is automatically updated whenever configuration changes are made to the website infrastructure.
-
-
-## Nginx Configuration
-
-### Primary Site: lalten.org
-
-**Config File**: `/etc/nginx/sites-available/lalten.org`
-**Enabled**: Yes (symlinked in `/etc/nginx/sites-enabled/`)
-
-#### Server Details
-- **Domains**: `lalten.org`, `www.lalten.org`
-- **SSL/TLS**: Let's Encrypt certificates managed by Certbot
-  - Certificate: `/etc/letsencrypt/live/lalten.org/fullchain.pem`
-  - Private Key: `/etc/letsencrypt/live/lalten.org/privkey.pem`
-- **HTTP→HTTPS**: Automatic redirect from port 80 to 443
-
-#### Routes
-
-**Proxy Headers Set**:
-- `Host: $host`
-- `X-Real-IP: $remote_addr`
-
-**Regmi Research Search**:
-- Static UI and PDFs remain under `/pages/regmi_research_papers/`
-- Search API is proxied from `/pages/regmi_research_papers/api/` to `127.0.0.1:8755`
-- Backend service directory: `/root/lalten/regmi_search`
-
-## Maintenance Notes
-
-### SSL Certificate Renewal
-Certificates are managed by Certbot and should auto-renew. Monitor expiration dates.
-
-### Database Backups
-
-WAL (Write-Ahead Logging) files present, indicating active usage.
-
-### Updates Required
-When making changes, update this document and note:
-1. Change description
-2. Date of change
-3. Files affected
-4. Any required service restarts
-
-### 2026-03-30 Search Deployment
-- Change description: Added a hybrid Regmi archive search page with regex and semantic search.
-- Files affected: `/root/lalten/pages/regmi_research_papers/index.html`, `/root/lalten/regmi_search/main.py`, `/root/lalten/regmi_search/pyproject.toml`, `/root/lalten/regmi_search/regmi_search.service`, `/root/lalten/regmi_search/data/*`, `/etc/nginx/sites-available/lalten.org`, `/root/lalten/nginx.conf`, `/root/lalten/README.md`
-- Required service restarts: `systemctl restart regmi_search.service`, `systemctl reload nginx`
-
-
-
-## Krabbs-assisted authoring + deployment (automated workflow)
-
-This repo is now routinely updated by an assistant ("Krabbs") that can:
-
-- Create **static apps** (single `index.html` with embedded JS/CSS) under `/root/lalten/<app>/`.
-  - Expose them with an nginx `location /<app>/ { alias /root/lalten/<app>/; }` block.
-- Create / modify **FastHTML Python apps** under `/root/lalten/<app>/`.
-  - Create a `systemd` service file in the app directory and symlink it into `/etc/systemd/system/`.
-  - Ensure the app binds to `127.0.0.1:<port>` and is only exposed via nginx (reduced attack surface).
-- Update `/root/lalten/nginx.conf` safely (then `nginx -t` and `systemctl reload nginx`).
-- Deploy digest-like artifacts (e.g., via SQLite upserts over SSH) without adding new public APIs.
-
-**Important constraints:**
-- Do not commit secrets/credentials.
-- Prefer localhost-only app binds + nginx reverse proxy.
-- Keep generated artifacts (DBs, venvs) out of git via `.gitignore`.
+But every new deploy should leave behind documentation in this repo so the server state stays legible to future humans and future Krabbs.
