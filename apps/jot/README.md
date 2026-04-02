@@ -1,4 +1,10 @@
-# jot
+# jot (vendored deploy copy)
+
+> Upstream project: https://github.com/badlogic/jot
+>
+> This directory is **not** a traditional GitHub fork. It is a vendored copy of the upstream repository, checked into the `lalten` monorepo so the deployment-specific base-path patch (`/jot`) and server wiring can live alongside the nginx/service config.
+>
+> If you want the canonical project history, issues, and upstream README context, go to the original source above. The rest of this file is the upstream README content as pulled at deploy time, plus local deployment notes elsewhere in this repo (notably `apps/jot/DEPLOY.md`).
 
 https://github.com/user-attachments/assets/542c333c-c26e-4f04-a5bb-2cf4131e60f3
 
