@@ -289,7 +289,7 @@
 
     if (notesButton) {
       notesButton.addEventListener("click", () => {
-        window.location.href = "/";
+        window.location.href = withBase("/");
       });
     }
 

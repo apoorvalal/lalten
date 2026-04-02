@@ -149,3 +149,72 @@ Share endpoints (no auth, access controlled by `shareAccess`):
 ## License
 
 MIT
+
+## Deployment in the lalten monorepo
+
+This deployed copy lives inside the `lalten` monorepo rather than as a traditional Git fork.
+
+### Why it is mounted at `/jot/`
+`jot` expects to live at the URL root with root-relative routes such as:
+- `/login`
+- `/notes/:id`
+- `/s/:shareId`
+- `/api/...`
+- websocket connection on `/`
+
+Because `lalten.org` already hosts other apps, this deployed copy carries a small local base-path patch so it can live under:
+- `https://lalten.org/jot/`
+
+That base path is threaded through:
+- frontend fetches
+- redirects
+- asset URLs
+- websocket URL construction
+- share URLs
+
+### Runtime paths on the Hetzner server
+- app source: `/root/lalten/apps/jot`
+- persistent data: `/root/lalten/data/jot`
+- service file in repo: `/root/lalten/jot.service`
+- public URL: `https://lalten.org/jot/`
+
+### Service configuration
+The systemd unit runs with:
+- `BASE_PATH=/jot`
+- `PORT=3210`
+- `DATA_DIR=/root/lalten/data/jot`
+
+The unit file is stored in-repo and symlinked into `/etc/systemd/system/`.
+
+### Nginx routing
+`/root/lalten/nginx.conf` proxies:
+- `/jot/` → `http://127.0.0.1:3210/`
+- `/jot` → redirect to `/jot/`
+
+Websocket proxy headers are enabled because `jot` uses `ws` for collaboration.
+
+### Deploy / update procedure
+If someone wants to set this up in the same style:
+
+1. sync source into the server repo, e.g. `/root/lalten/apps/jot`
+2. make sure Node is available on the server
+3. install dependencies:
+   ```bash
+   npm install
+   ```
+4. build with the deployment env:
+   ```bash
+   BASE_PATH=/jot PORT=3210 DATA_DIR=/root/lalten/data/jot npm run build
+   ```
+5. install a systemd service that starts:
+   ```bash
+   npm run start
+   ```
+   with the same env vars
+6. add an nginx reverse proxy for `/jot/`
+7. validate nginx and restart both nginx + the service
+
+### Minor papercut already fixed
+- The note-view back button originally redirected to `/` instead of `/jot/` because one frontend handler in `public/app.js` still used a hardcoded root path.
+- Fix: changed it to `withBase("/")`, rebuilt, and restarted the service.
+
