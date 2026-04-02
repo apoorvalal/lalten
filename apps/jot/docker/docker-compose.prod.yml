@@ -1,0 +1,12 @@
+version: "3"
+services:
+    app:
+        labels:
+            caddy: jot.mariozechner.at
+            caddy.reverse_proxy: "{{upstreams 3000}}"
+        networks:
+            - reverse_proxy
+networks:
+    reverse_proxy:
+        external:
+            name: caddy-network

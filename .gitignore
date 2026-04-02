@@ -214,3 +214,8 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 data/
+
+# Jot deploy artifacts
+/apps/jot/node_modules/
+/apps/jot/dist/
+/data/jot/

@@ -1,0 +1,18 @@
+[Unit]
+Description=Jot markdown editor
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/root/lalten/apps/jot
+Environment=BASE_PATH=/jot
+Environment=PORT=3210
+Environment=DATA_DIR=/root/lalten/data/jot
+Environment=PATH=/root/.nvm/versions/node/v22.20.0/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+ExecStart=/root/.nvm/versions/node/v22.20.0/bin/npm run start
+Restart=always
+RestartSec=3
+User=root
+
+[Install]
+WantedBy=multi-user.target

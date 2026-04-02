@@ -1,0 +1,34 @@
+{
+  "name": "@mariozechner/jot",
+  "version": "0.1.2",
+  "bin": {
+    "jot": "cli/jot.mjs"
+  },
+  "files": [
+    "dist",
+    "public",
+    "cli"
+  ],
+  "description": "Minimal self-hosted markdown editor with inline comment threads",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js"
+  },
+  "dependencies": {
+    "articulated": "^1.3.1",
+    "express": "^5.1.0",
+    "highlight.js": "^11.11.1",
+    "marked": "^16.4.1",
+    "sanitize-html": "^2.17.0",
+    "ws": "^8.20.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.3",
+    "@types/node": "^24.6.1",
+    "@types/sanitize-html": "^2.16.0",
+    "@types/ws": "^8.18.1",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.3"
+  }
+}
