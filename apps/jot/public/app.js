@@ -7,6 +7,24 @@
   const basePath = window.__BASE_PATH__ || "";
   const withBase = (path) => `${basePath}${path}`;
 
+  function renderMathInPreview(element) {
+    if (!element || typeof window.renderMathInElement !== "function") {
+      return;
+    }
+    try {
+      window.renderMathInElement(element, {
+        delimiters: [
+          { left: "$$", right: "$$", display: true },
+          { left: "$", right: "$", display: false },
+        ],
+        throwOnError: false,
+        strict: "ignore",
+      });
+    } catch (error) {
+      console.warn("Failed to render math", error);
+    }
+  }
+
   if (!app || !page) {
     return;
   }
@@ -607,6 +625,7 @@
         state.note.markdown = payload.note.markdown;
         if (refsArg.previewContent) {
           refsArg.previewContent.innerHTML = payload.note.renderedHtml || "";
+          renderMathInPreview(refsArg.previewContent);
         }
         if (refsArg.topbarTitle) {
           refsArg.topbarTitle.textContent = payload.note.title || "untitled";
@@ -628,6 +647,7 @@
           }
           if (refsArg.previewContent) {
             refsArg.previewContent.innerHTML = payload.note.renderedHtml || "";
+            renderMathInPreview(refsArg.previewContent);
           }
         }
       }
@@ -676,6 +696,7 @@
       }
       if (refsArg.previewContent) {
         refsArg.previewContent.innerHTML = payload.note.renderedHtml || "";
+        renderMathInPreview(refsArg.previewContent);
       }
       if (refsArg.commenterLabel) {
         refsArg.commenterLabel.textContent = payload.viewer.commenterName ? payload.viewer.commenterName : "anonymous";
@@ -698,6 +719,7 @@
         });
         if (refsArg.previewContent) {
           refsArg.previewContent.innerHTML = payload.html;
+          renderMathInPreview(refsArg.previewContent);
         }
         syncThreadLayout(refsArg);
       }, 150);

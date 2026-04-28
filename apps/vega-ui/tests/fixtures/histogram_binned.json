@@ -1,0 +1,15 @@
+{
+  "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+  "data": {
+    "values": [
+      {"score": 10}, {"score": 20}, {"score": 25},
+      {"score": 30}, {"score": 35}, {"score": 40},
+      {"score": 50}, {"score": 60}, {"score": 70}
+    ]
+  },
+  "mark": "bar",
+  "encoding": {
+    "x": {"field": "score", "type": "quantitative", "bin": true},
+    "y": {"aggregate": "count", "type": "quantitative"}
+  }
+}

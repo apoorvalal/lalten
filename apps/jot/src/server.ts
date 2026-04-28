@@ -131,6 +131,7 @@ const dataDir = cliArg("data") || process.env.DATA_DIR || path.join(process.cwd(
 const notesDir = path.join(dataDir, "notes");
 const authFilePath = path.join(dataDir, "auth.json");
 const publicDir = path.join(path.resolve(__dirname, ".."), "public");
+const katexDistDir = path.join(path.resolve(__dirname, ".."), "node_modules", "katex", "dist");
 const ownerSessionCookieName = "md_owner_session";
 const ownerLocalStorageTokenKey = "md_owner_token";
 const commenterIdCookieName = "md_commenter_id";
@@ -170,6 +171,7 @@ app.set("trust proxy", true);
 app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ extended: true, limit: "2mb" }));
 app.use("/static", express.static(publicDir));
+app.use("/vendor/katex", express.static(katexDistDir));
 
 app.get("/health", (_req, res) => {
   res.type("text/plain").send("ok");
@@ -2175,6 +2177,7 @@ function renderAppShell(
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>${escapeHtml(title)}</title>
     <link rel="stylesheet" href="${withBase("/static/styles.css")}" />
+    <link rel="stylesheet" href="${withBase("/vendor/katex/katex.min.css")}" />
     <script src="${withBase("/static/theme.js")}"></script>
   </head>
   <body class="page-shell app-page" ${attrs}>
@@ -2182,6 +2185,8 @@ function renderAppShell(
     <script>window.__OWNER_TOKEN_KEY__ = ${JSON.stringify(ownerLocalStorageTokenKey)}; window.__BASE_PATH__ = ${JSON.stringify(basePath)};</script>
     <script>document.querySelectorAll('.theme-toggle').forEach(function(b){b.innerHTML=window.__themeIcon(document.documentElement.getAttribute('data-theme')||'dark')});</script>
     <script src="${withBase("/static/components.js")}"></script>
+    <script src="${withBase("/vendor/katex/katex.min.js")}"></script>
+    <script src="${withBase("/vendor/katex/contrib/auto-render.min.js")}"></script>
     <script src="${withBase("/static/app.js")}" defer></script>
   </body>
 </html>`;

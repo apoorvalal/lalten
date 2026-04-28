@@ -1,0 +1,17 @@
+{
+  "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+  "data": {
+    "values": [
+      {"year": 2020, "sales": 100, "region": "East"},
+      {"year": 2021, "sales": 150, "region": "East"},
+      {"year": 2020, "sales": 80, "region": "West"},
+      {"year": 2021, "sales": 120, "region": "West"}
+    ]
+  },
+  "mark": "line",
+  "encoding": {
+    "x": {"field": "year", "type": "ordinal"},
+    "y": {"field": "sales", "type": "quantitative"},
+    "color": {"field": "region", "type": "nominal"}
+  }
+}

@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>clawd-code vs openai/codex</title>
+  <style>
+    body {
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.5;
+      max-width: 920px;
+      margin: 40px auto;
+      padding: 0 20px;
+      color: #1f2937;
+      background: #fcfcfd;
+    }
+    h1, h2, h3 { color: #111827; }
+    code { background: #f3f4f6; padding: 2px 6px; border-radius: 6px; }
+    pre {
+      background: #f3f4f6;
+      padding: 14px;
+      border-radius: 10px;
+      overflow-x: auto;
+    }
+    .box {
+      background: #f8fafc;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 16px 18px;
+      margin: 16px 0;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    @media (max-width: 800px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+    ul { margin-top: 8px; }
+    .muted { color: #6b7280; }
+  </style>
+</head>
+<body>
+  <h1>Quick harness comparison: <code>clawd-code</code> vs <code>openai/codex</code></h1>
+  <p class="muted">Generated from a shallow structural read of both repositories on 2026-03-31.</p>
+
+  <div class="box">
+    <strong>Short version</strong>
+    <ul>
+      <li><code>clawd-code</code> looks like a <strong>compact Python porting/research workspace</strong>.</li>
+      <li><code>openai/codex</code> looks like a <strong>large production monorepo for a shipping agent CLI</strong>.</li>
+    </ul>
+  </div>
+
+  <h2>Top-level feel</h2>
+  <div class="grid">
+    <div class="box">
+      <h3>clawd-code</h3>
+      <ul>
+        <li>Small top level</li>
+        <li>Mainly <code>src/</code> + <code>tests/</code></li>
+        <li>Python-first</li>
+        <li>README frames it as a clean-room Claude Code porting workspace</li>
+        <li>Current emphasis is manifesting, parity audit, command/tool inventories, and routing</li>
+      </ul>
+    </div>
+    <div class="box">
+      <h3>openai/codex</h3>
+      <ul>
+        <li>Big monorepo</li>
+        <li><code>codex-cli/</code> packaging layer</li>
+        <li><code>codex-rs/</code> real Rust implementation</li>
+        <li><code>docs/</code> is extensive</li>
+        <li>Clearly organized around a maintained, installable product</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2>Primary-file signals</h2>
+  <div class="grid">
+    <div class="box">
+      <h3>clawd-code</h3>
+      <p>The README explicitly says the repo is now a Python-first porting workspace rather than a tracked snapshot. The CLI entrypoint in <code>src/main.py</code> is mostly for:</p>
+      <pre>summary
+manifest
+parity-audit
+subsystems
+commands
+tools
+route
+show-command
+show-tool</pre>
+      <p>That strongly suggests a harness skeleton focused on representation, inspection, and porting progress rather than a fully polished runtime.</p>
+    </div>
+    <div class="box">
+      <h3>openai/codex</h3>
+      <p>The docs and package manifests say “shipping CLI product” everywhere. The Rust README makes the architecture explicit:</p>
+      <pre>core/   business logic
+exec/   headless automation CLI
+tui/    fullscreen TUI
+cli/    command multitool wrapper</pre>
+      <p>That is a much more mature and productionized split.</p>
+    </div>
+  </div>
+
+  <h2>Architecture vibe</h2>
+  <div class="grid">
+    <div class="box">
+      <h3>clawd-code</h3>
+      <ul>
+        <li>Interpretable</li>
+        <li>Compact</li>
+        <li>Easy to scan quickly</li>
+        <li>Likely easier to hack on fast</li>
+        <li>Looks unfinished as a complete end-user harness</li>
+      </ul>
+    </div>
+    <div class="box">
+      <h3>openai/codex</h3>
+      <ul>
+        <li>Industrial</li>
+        <li>Heavier operational surface</li>
+        <li>Much richer docs around config/auth/sandbox/MCP</li>
+        <li>Clearly designed for release engineering and real users</li>
+        <li>Harder to absorb quickly because of repo size/complexity</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2>Best one-line summary</h2>
+  <div class="box">
+    <ul>
+      <li><strong>clawd-code</strong>: interpretable prototype / clean-room Python port</li>
+      <li><strong>openai/codex</strong>: actual product monorepo</li>
+    </ul>
+  </div>
+
+  <h2>What each is best for</h2>
+  <div class="grid">
+    <div class="box">
+      <h3>Use <code>clawd-code</code> if you want to...</h3>
+      <ul>
+        <li>understand the harness ideas quickly</li>
+        <li>inspect a smaller porting workspace</li>
+        <li>hack on Python metadata/parity/runtime scaffolding</li>
+      </ul>
+    </div>
+    <div class="box">
+      <h3>Use <code>openai/codex</code> if you want to...</h3>
+      <ul>
+        <li>study a mature shipping agent CLI</li>
+        <li>see how product-grade sandbox/TUI/exec/docs are organized</li>
+        <li>learn from a real release-oriented harness stack</li>
+      </ul>
+    </div>
+  </div>
+
+  <p class="muted">Bottom line: <code>clawd-code</code> is easier to reason about; <code>openai/codex</code> is the better specimen of what a serious harness looks like in production.</p>
+</body>
+</html>

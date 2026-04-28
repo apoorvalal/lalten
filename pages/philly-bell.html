@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Philly Sandwich Bell</title>
+  <style>
+    :root {
+      --bg1: #fff6e8;
+      --bg2: #ffe0b2;
+      --ink: #3a2618;
+      --gold: #d4a64a;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: block;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--ink);
+      background: radial-gradient(circle at top, var(--bg1), var(--bg2));
+      overflow-x: hidden;
+      overflow-y: auto;
+    }
+    .wrap {
+      width: min(980px, 94vw);
+      text-align: center;
+      padding: 28px 18px 40px;
+      margin: 0 auto;
+    }
+    h1 {
+      margin: 0 0 10px;
+      font-size: clamp(2rem, 4vw, 3.5rem);
+      letter-spacing: 0.02em;
+    }
+    p {
+      margin: 0 0 24px;
+      font-size: clamp(1rem, 1.8vw, 1.2rem);
+    }
+    .scene {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 18px;
+      align-items: end;
+      justify-items: center;
+    }
+    .sandwich-stack {
+      display: flex;
+      gap: 18px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .philly {
+      width: 170px;
+      height: 160px;
+      position: relative;
+      border: 0;
+      background: transparent;
+      padding: 0;
+      cursor: pointer;
+      filter: drop-shadow(0 10px 8px rgba(0,0,0,0.15));
+      animation: bob 2.8s ease-in-out infinite;
+    }
+    .philly:nth-child(2) { animation-delay: 0.25s; }
+    .philly:nth-child(3) { animation-delay: 0.5s; }
+    .philly-inner {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      transition: transform 0.35s ease;
+    }
+    .philly.open .philly-inner { transform: translateY(-8px); }
+    .sandwich-body {
+      position: absolute;
+      inset: 0;
+    }
+    .roll-top, .roll-bottom {
+      position: absolute;
+      left: 8px;
+      right: 8px;
+      background: linear-gradient(#f0c97a, #dba95c);
+      border: 3px solid #b77a35;
+    }
+    .roll-top {
+      top: 18px;
+      height: 36px;
+      border-radius: 38px 38px 18px 18px;
+      transform-origin: left bottom;
+      transition: transform 0.35s ease;
+    }
+    .philly.open .roll-top { transform: rotate(-18deg) translateY(-12px); }
+    .roll-bottom {
+      top: 66px;
+      height: 20px;
+      border-radius: 10px 10px 18px 18px;
+    }
+    .meat {
+      position: absolute;
+      left: 20px;
+      right: 20px;
+      top: 44px;
+      height: 28px;
+      background:
+        radial-gradient(circle at 10% 30%, #7d4f2d 0 18%, transparent 19%),
+        radial-gradient(circle at 30% 70%, #6d4022 0 18%, transparent 19%),
+        radial-gradient(circle at 52% 35%, #85522f 0 18%, transparent 19%),
+        radial-gradient(circle at 72% 70%, #6b3e21 0 18%, transparent 19%),
+        radial-gradient(circle at 90% 35%, #7b4a28 0 18%, transparent 19%),
+        linear-gradient(#8a5734, #714322);
+      border-radius: 18px;
+    }
+    .cheese {
+      position: absolute;
+      left: 34px;
+      right: 34px;
+      top: 52px;
+      height: 14px;
+      background: linear-gradient(#ffd94d, #ffbf1f);
+      border-radius: 6px;
+      transform: skewX(-10deg);
+    }
+    .pepper {
+      position: absolute;
+      width: 14px;
+      height: 8px;
+      background: #2e8b57;
+      border-radius: 10px;
+      top: 54px;
+    }
+    .pepper.p1 { left: 42px; }
+    .pepper.p2 { left: 88px; }
+    .pepper.p3 { left: 118px; }
+    .label {
+      position: absolute;
+      left: 50%;
+      top: 98px;
+      transform: translateX(-50%) scale(0.85);
+      min-width: 120px;
+      padding: 10px 14px;
+      border-radius: 14px;
+      background: rgba(255,255,255,0.92);
+      border: 2px solid #caa16a;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      opacity: 0;
+      transition: opacity 0.25s ease, transform 0.25s ease;
+      pointer-events: none;
+    }
+    .philly.open .label {
+      opacity: 1;
+      transform: translateX(-50%) scale(1);
+    }
+    .tapnote {
+      position: absolute;
+      top: 126px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 0.8rem;
+      opacity: 0.75;
+    }
+    .bell {
+      width: 230px;
+      height: 290px;
+      transform-origin: 50% 18%;
+      animation: wiggle 1.6s ease-in-out infinite;
+      filter: drop-shadow(0 12px 8px rgba(0,0,0,0.18));
+    }
+    .caption {
+      margin-top: 18px;
+      font-size: 0.95rem;
+      opacity: 0.85;
+    }
+    @keyframes wiggle {
+      0%, 100% { transform: rotate(-6deg); }
+      50% { transform: rotate(6deg); }
+    }
+    @keyframes bob {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+    @media (max-width: 760px) {
+      .scene {
+        grid-template-columns: 1fr;
+        gap: 28px;
+      }
+      .bell { order: -1; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Three Philly Sandwiches and a Wiggling Liberty Bell</h1>
+    <p>Tap a sandwich to open it up and see what it is.</p>
+
+    <div class="scene">
+      <div class="sandwich-stack">
+        <button class="philly" data-name="Hoagie" aria-label="Open hoagie">
+          <div class="philly-inner">
+            <div class="sandwich-body">
+              <div class="roll-top"></div><div class="meat"></div><div class="cheese"></div>
+              <div class="pepper p1"></div><div class="pepper p2"></div><div class="pepper p3"></div>
+              <div class="roll-bottom"></div>
+            </div>
+            <div class="label">Hoagie</div>
+            <div class="tapnote">tap me</div>
+          </div>
+        </button>
+      </div>
+
+      <svg class="bell" viewBox="0 0 220 280" aria-label="Wiggling Liberty Bell" role="img">
+        <rect x="85" y="8" width="50" height="24" rx="6" fill="#7a5a37" />
+        <path d="M58 46 C62 24, 158 24, 162 46 L182 190 C185 214, 168 236, 144 240 L76 240 C52 236, 35 214, 38 190 Z"
+              fill="#d4a64a" stroke="#8b6b4a" stroke-width="6"/>
+        <path d="M96 68 L118 132 L102 132 L124 206"
+              fill="none" stroke="#6b4a2e" stroke-width="10" stroke-linecap="round"/>
+        <path d="M50 214 Q110 244 170 214" fill="none" stroke="#8b6b4a" stroke-width="8"/>
+        <circle cx="110" cy="232" r="16" fill="#7a5a37" />
+        <rect x="96" y="236" width="28" height="16" rx="5" fill="#7a5a37" />
+      </svg>
+
+      <div class="sandwich-stack">
+        <button class="philly" data-name="Cheesesteak" aria-label="Open cheesesteak">
+          <div class="philly-inner">
+            <div class="sandwich-body">
+              <div class="roll-top"></div><div class="meat"></div><div class="cheese"></div>
+              <div class="pepper p1"></div><div class="pepper p2"></div><div class="pepper p3"></div>
+              <div class="roll-bottom"></div>
+            </div>
+            <div class="label">Cheesesteak</div>
+            <div class="tapnote">tap me</div>
+          </div>
+        </button>
+        <button class="philly" data-name="Cheesesteak" aria-label="Open cheesesteak">
+          <div class="philly-inner">
+            <div class="sandwich-body">
+              <div class="roll-top"></div><div class="meat"></div><div class="cheese"></div>
+              <div class="pepper p1"></div><div class="pepper p2"></div><div class="pepper p3"></div>
+              <div class="roll-bottom"></div>
+            </div>
+            <div class="label">Cheesesteak</div>
+            <div class="tapnote">tap me</div>
+          </div>
+        </button>
+      </div>
+    </div>
+
+    <div class="caption">The bell wiggles. The sandwiches open up when tapped.</div>
+  </div>
+
+  <script>
+    document.querySelectorAll('.philly').forEach(btn => {
+      btn.addEventListener('click', () => {
+        btn.classList.toggle('open');
+      });
+    });
+  </script>
+</body>
+</html>

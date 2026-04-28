@@ -1,62 +1,69 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lalten</title>
-    <style>
-        body {
-            background-color: black;
-            color: #00ff00;
-            font-family: monospace;
-            padding: 40px;
-            line-height: 1.6;
-        }
-        a {
-            color: #00ff00;
-            text-decoration: none;
-        }
-        a:hover {
-            text-decoration: underline;
-        }
-        h1 {
-            font-size: 2em;
-            margin-bottom: 10px;
-        }
-        h2 {
-            font-size: 1.5em;
-            margin-top: 30px;
-            margin-bottom: 15px;
-        }
-        ul {
-            list-style: none;
-            padding-left: 0;
-        }
-        li {
-            margin: 8px 0;
-        }
-        img {
-            width: 100%;
-            max-width: 800px;
-            height: auto;
-            display: block;
-            margin-top: 30px;
-            border: 2px solid #00ff00;
-            border-radius: 8px;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lalten</title>
+  <style>
+    :root { color-scheme: dark; --bg:#050505; --fg:#d8ffd8; --muted:#88aa88; --accent:#00ff66; --card:#101510; --line:#244424; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--fg); font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; line-height: 1.55; }
+    main { max-width: 980px; margin: 0 auto; padding: 42px 22px 70px; }
+    h1 { color: var(--accent); margin: 0 0 0.25rem; font-size: clamp(2rem, 6vw, 4rem); letter-spacing: -0.06em; }
+    h2 { color: var(--accent); margin-top: 2.2rem; border-bottom: 1px solid var(--line); padding-bottom: 0.35rem; }
+    p { color: var(--muted); }
+    a { color: var(--fg); text-decoration-color: var(--accent); text-underline-offset: 3px; }
+    a:hover { color: var(--accent); }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+    .card { border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; background: var(--card); min-height: 112px; }
+    .card strong { display:block; margin-bottom: 0.3rem; color: white; }
+    .card span { color: var(--muted); font-size: 0.92rem; }
+    ul { padding-left: 1.2rem; }
+    li { margin: 0.35rem 0; }
+    .small { font-size: 0.9rem; color: var(--muted); }
+  </style>
 </head>
 <body>
-    <h1>Lalten 🏮</h1>
-    <p><a href="https://apoorvalal.github.io">Apoorva</a></p>
-    <p><a href="https://jesscyzhao.github.io/">Chunyi</a></p>
+<main>
+  <h1>Lalten</h1>
+  <p>A small home for research tools, family utilities, drafts, and one-off web artifacts.</p>
+  <p><a href="https://apoorvalal.github.io">Apoorva</a> · <a href="https://jesscyzhao.github.io/">Chunyi</a></p>
 
-    <h2>Webapps</h2>
-    <ul>
-        <li><a href="/radio">🎵 Radio</a> - Web radio player</li>
-        <li><a href="/linkpull">🔗 LinkPull</a> - URL extractor and scraper</li>
-    </ul>
+  <h2>Apps</h2>
+  <section class="grid">
+    <a class="card" href="/jot/"><strong>Jot</strong><span>Markdown notes, comments, sharing, KaTeX-enabled previews.</span></a>
+    <a class="card" href="/vega-ui/"><strong>Vega UI</strong><span>FastHTML interface for Vega/Altair chart editing and export.</span></a>
+    <a class="card" href="/notes/"><strong>Notes</strong><span>Quick capture and review notes.</span></a>
+    <a class="card" href="/menu/"><strong>Menu</strong><span>Menu planning helper.</span></a>
+    <a class="card" href="/linkpull/"><strong>LinkPull</strong><span>URL extraction and scraping helper.</span></a>
+    <a class="card" href="/radio/"><strong>Radio</strong><span>Web radio player and proxy.</span></a>
+    <a class="card" href="/parenting/"><strong>Parenting</strong><span>Milk inventory / parenting utility.</span></a>
+    <a class="card" href="/daylight/"><strong>Daylight</strong><span>Daylight explorer.</span></a>
+    <a class="card" href="/arxiv_methods_charts/"><strong>ArXiv methods charts</strong><span>Streamlit explorer for methods-oriented paper feeds.</span></a>
+    <a class="card" href="/KrustyTheKrabs/"><strong>KrustyTheKrabs</strong><span>Pinch counter / small family app.</span></a>
+    <a class="card" href="/pages/regmi_research_papers/"><strong>Regmi research search</strong><span>Static papers plus search API.</span></a>
+  </section>
 
-    <img src="https://images.unsplash.com/photo-1555488205-d5e67846cf40?fm=jpg" alt="Lantern">
+  <h2>Static and draft areas</h2>
+  <ul>
+    <li><a href="/pages/">/pages/</a> — published static pages and research artifacts.</li>
+    <li><a href="/drafts/">/drafts/</a> — in-progress self-contained HTML drafts.</li>
+    <li><a href="/misc/">/misc/</a> — miscellaneous static files.</li>
+  </ul>
+
+  <h2>Selected pages</h2>
+  <ul>
+    <li><a href="/pages/harness_compare_codex_clawd.html">clawd-code vs openai/codex</a></li>
+    <li><a href="/pages/lean_crash_course/">Lean crash course</a></li>
+    <li><a href="/pages/policy_cate/policy_cate_comparison.html">Policy-aligned CATE estimation</a></li>
+    <li><a href="/pages/philly-bell.html">Philly Sandwich Bell</a></li>
+    <li><a href="/pages/argminist/">Argminist</a></li>
+    <li><a href="/pages/econometrica-manuscript/">Illuminated Econometrics Manuscript</a></li>
+    <li><a href="/galton/">Galton board</a></li>
+    <li><a href="/chordtutor/">ChordTutor</a></li>
+  </ul>
+
+  <p class="small">Server config and app units are managed in the version-controlled <code>/root/lalten</code> repo.</p>
+</main>
 </body>
 </html>
