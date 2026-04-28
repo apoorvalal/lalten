@@ -7,6 +7,7 @@ This repo is the deployment/control plane for the Hetzner box. It contains:
 - app source for selected deployed services
 - systemd unit files (kept in-repo, symlinked into `/etc/systemd/system/`)
 - static pages under `/root/lalten/pages/`
+- in-progress HTML drafts under `/root/lalten/drafts/`
 - small app directories under `/root/lalten/<app>/` or `/root/lalten/apps/<app>/`
 
 ## Core rule
@@ -23,6 +24,7 @@ At a high level:
 nginx (HTTPS on lalten.org)
 ├── static root                -> /var/www/html
 ├── /pages/                    -> /root/lalten/pages/
+├── /drafts/                   -> /root/lalten/drafts/
 ├── /misc/                     -> /root/lalten/misc/
 ├── reverse-proxied app routes -> localhost ports
 └── static app aliases         -> app-specific directories
@@ -32,6 +34,7 @@ nginx (HTTPS on lalten.org)
 
 ### Static / alias-backed
 - `/pages/` → `/root/lalten/pages/`
+- `/drafts/` → `/root/lalten/drafts/`
 - `/misc/` → `/root/lalten/misc/`
 - `/galton/` → static app in `/root/lalten/galton/`
 - `/chordtutor/` → static app in `/root/lalten/chordtutor/`
@@ -47,17 +50,26 @@ nginx (HTTPS on lalten.org)
 - `/arxiv_methods_charts/` → `127.0.0.1:8754`
 - `/pages/regmi_research_papers/api/` → `127.0.0.1:8755`
 - `/jot/` → `127.0.0.1:3210`
+- `/vega-ui/` → `127.0.0.1:8756`
 
 ## Important deployed paths
 
 ### Main nginx config
 - Repo path: `/root/lalten/nginx.conf`
-- System path should be a symlink target from nginx's enabled site config.
+- Enabled site: `/etc/nginx/sites-enabled/lalten.org` → `/root/lalten/nginx.conf`
+- Available site: `/etc/nginx/sites-available/lalten.org` → `/root/lalten/nginx.conf`
+- Keep only one enabled nginx site for lalten to avoid duplicate `server_name` warnings.
 
 ### Static pages
 - Directory: `/root/lalten/pages/`
 - Files dropped here are served immediately at:
   - `https://lalten.org/pages/<filename>`
+
+### Draft HTML artifacts
+- Directory: `/root/lalten/drafts/`
+- Use for in-progress, self-contained HTML drafts that Krabbs should publish and link for review.
+- Files dropped here are served immediately at:
+  - `https://lalten.org/drafts/<filename>.html`
 
 ### Jot
 - App source: `/root/lalten/apps/jot`
@@ -73,6 +85,15 @@ nginx (HTTPS on lalten.org)
 ### Regmi research search
 - Backend app: `/root/lalten/regmi_search`
 - Public search API path: `/pages/regmi_research_papers/api/`
+
+### Vega UI
+- App source: `/root/lalten/apps/vega-ui`
+- Service file in repo: `/root/lalten/vega-ui.service`
+- Public URL: `https://lalten.org/vega-ui/`
+- Local bind: `127.0.0.1:8756`
+- Notes:
+  - This app is cloned from `https://github.com/apoorvalal/vega-ui`
+  - It runs with `VEGA_UI_BASE_PATH=/vega-ui`
 
 ## Deployment patterns
 
@@ -102,6 +123,24 @@ Persistent state should generally live outside the app working tree when conveni
 This keeps updates cleaner and makes backup policy more obvious.
 
 ## Services and operations
+
+### Systemd unit rule
+All lalten webapp units should live in this repo and be symlinked from `/etc/systemd/system/`.
+Currently repo-backed units are:
+
+- `/etc/systemd/system/notes.service` → `/root/lalten/notes/notes.service`
+- `/etc/systemd/system/menu.service` → `/root/lalten/menu/menu.service`
+- `/etc/systemd/system/linkpull.service` → `/root/lalten/linkpull/linkpull.service`
+- `/etc/systemd/system/radio.service` → `/root/lalten/radio/radio.service`
+- `/etc/systemd/system/parenting.service` → `/root/lalten/parenting/parenting.service`
+- `/etc/systemd/system/daylight.service` → `/root/lalten/daylight/daylight.service`
+- `/etc/systemd/system/arxiv_ranker.service` → `/root/lalten/arxiv_ranker/arxiv_ranker.service`
+- `/etc/systemd/system/krustythekrabs.service` → `/root/lalten/krustythekrabs/krustythekrabs.service`
+- `/etc/systemd/system/regmi_search.service` → `/root/lalten/regmi_search/regmi_search.service`
+- `/etc/systemd/system/jot.service` → `/root/lalten/jot.service`
+- `/etc/systemd/system/vega-ui.service` → `/root/lalten/vega-ui.service`
+
+Avoid ad-hoc `.bak` files and timestamped backup directories in the repo; use git for history.
 
 ### Inspect service status
 ```bash
@@ -135,6 +174,7 @@ Whenever a **new app or deployment path** is added to this server:
 
 Krabbs can:
 - add static pages to `/pages/`
+- add in-progress self-contained HTML drafts to `/drafts/` and send `https://lalten.org/drafts/<filename>.html`
 - deploy small Python/Node apps behind nginx
 - maintain repo-local nginx + service definitions
 - publish digest-like artifacts to KrustyTheKrabs

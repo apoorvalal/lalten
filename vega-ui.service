@@ -1,0 +1,16 @@
+[Unit]
+Description=Vega UI FastHTML Application
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/lalten/apps/vega-ui
+ExecStart=/snap/bin/uv run vega-ui
+Restart=always
+Environment=HOST=127.0.0.1
+Environment=PORT=8756
+Environment=VEGA_UI_BASE_PATH=/vega-ui
+
+[Install]
+WantedBy=multi-user.target

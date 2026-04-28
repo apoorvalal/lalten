@@ -219,3 +219,6 @@ data/
 /apps/jot/node_modules/
 /apps/jot/dist/
 /data/jot/
+
+# Local scratch/backups
+/tmp/
