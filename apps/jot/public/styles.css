@@ -17,6 +17,7 @@
   --danger: #ff7878;
   --shadow: 0 18px 60px rgba(0, 0, 0, 0.45);
   --toolbar-height: 60px;
+  --viewport-height: 100vh;
   --thread-width: 352px;
   --code-bg: #171717;
   --code-border: #2b2b2b;
@@ -42,6 +43,10 @@
   --hljs-comment: #7a7a7a;
   --hljs-number: #ff8a65;
   --hljs-type: #7cc7ff;
+}
+
+@supports (height: 100dvh) {
+  :root { --viewport-height: 100dvh; }
 }
 
 [data-theme="light"] {
@@ -98,19 +103,19 @@ html, body {
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
-body { min-height: 100vh; }
+body { min-height: var(--viewport-height); }
 
 [data-page="editor"],
 [data-page="editor"] .app-root,
 [data-page="public"][data-share-access="edit"],
 [data-page="public"][data-share-access="edit"] .app-root {
-  height: 100vh;
+  height: var(--viewport-height);
   overflow: hidden;
 }
 
 [data-page="public"]:not([data-share-access="edit"]),
 [data-page="public"]:not([data-share-access="edit"]) .app-root {
-  min-height: 100vh;
+  min-height: var(--viewport-height);
   height: auto;
   overflow: visible;
 }
@@ -180,7 +185,7 @@ input, textarea {
 input:focus, textarea:focus { border-color: var(--muted); }
 
 .hidden { display: none !important; }
-.page-shell { min-height: 100vh; }
+.page-shell { min-height: var(--viewport-height); }
 .simple-page { display: grid; place-items: center; }
 .simple-page-content { width: min(560px, calc(100vw - 2rem)); }
 
@@ -195,7 +200,7 @@ input:focus, textarea:focus { border-color: var(--muted); }
 .auth-actions { padding-top: 0.4rem; }
 .auth-actions button { border-radius: 10px; padding: 0.8rem 1rem; }
 
-.app-root { min-height: 100vh; overflow: hidden; }
+.app-root { min-height: var(--viewport-height); overflow: hidden; }
 
 .topbar {
   min-height: var(--toolbar-height);
@@ -274,7 +279,7 @@ input:focus, textarea:focus { border-color: var(--muted); }
 
 .workspace {
   display: grid; grid-template-columns: 1fr 1fr;
-  height: calc(100vh - var(--toolbar-height)); overflow: hidden;
+  height: calc(var(--viewport-height) - var(--toolbar-height)); overflow: hidden;
 }
 .editor-pane {
   border-right: 1px solid var(--line); background: var(--editor-bg); overflow: hidden;
@@ -517,21 +522,45 @@ input:focus, textarea:focus { border-color: var(--muted); }
     position: fixed; inset: 0; z-index: 40;
     transform: translateX(100%);
     transition: transform 250ms ease;
-    min-height: 100vh; height: 100vh;
+    min-height: var(--viewport-height); height: var(--viewport-height);
   }
   .workspace .preview-stage.preview-open {
     transform: translateX(0);
   }
-  .workspace .preview-stage .preview-close-btn { display: inline-flex; }
+  .workspace .preview-stage .preview-close-btn {
+    display: inline-flex;
+    position: absolute;
+    top: calc(0.5rem + env(safe-area-inset-top, 0px));
+    left: calc(0.5rem + env(safe-area-inset-left, 0px));
+    right: auto;
+    margin-left: 0;
+  }
   #previewFab { display: inline-flex !important; }
 
   /* Editor takes full height */
-  .editor-textarea { min-height: 0; flex: 1; }
+  .editor-textarea {
+    min-height: 0;
+    flex: 1;
+    padding-top: calc(2rem + env(safe-area-inset-top, 0px));
+    padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0px));
+  }
 
-  .preview-scroll, .preview-stage { height: 100vh; min-height: 100vh; }
+  .preview-scroll, .preview-stage { height: var(--viewport-height); min-height: var(--viewport-height); }
   .preview-scroll { height: 100%; }
   .preview-canvas { padding-right: 0; }
-  .preview-content, .preview-stage.public .preview-content { width: auto; max-width: none; padding: 2rem 1rem 1rem; }
+  .preview-content, .preview-stage.public .preview-content {
+    width: auto;
+    max-width: none;
+    padding:
+      calc(3.5rem + env(safe-area-inset-top, 0px))
+      calc(1rem + env(safe-area-inset-right, 0px))
+      calc(5rem + env(safe-area-inset-bottom, 0px))
+      calc(1rem + env(safe-area-inset-left, 0px));
+  }
+  .preview-controls {
+    top: calc(0.5rem + env(safe-area-inset-top, 0px));
+    right: calc(0.5rem + env(safe-area-inset-right, 0px));
+  }
   .thread-rail { display: none !important; }
   .selection-bubble { display: none !important; }
   .topbar-desktop { display: none !important; }
