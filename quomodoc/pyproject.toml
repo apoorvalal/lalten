@@ -1,0 +1,7 @@
+[project]
+name = "quomodoc"
+version = "0.1.0"
+description = "Hosted HTML documents with anchored text comments"
+requires-python = ">=3.11"
+dependencies = ["flask>=3.1,<4"]
+

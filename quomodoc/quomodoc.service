@@ -1,0 +1,16 @@
+[Unit]
+Description=Quomodoc annotated HTML document service
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/lalten/quomodoc
+EnvironmentFile=/etc/quomodoc.env
+ExecStart=/snap/bin/uv run --frozen python /root/lalten/quomodoc/main.py
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target
+

@@ -1,0 +1,6 @@
+.venv/
+__pycache__/
+*.pyc
+quomodoc.db
+quomodoc.db-shm
+quomodoc.db-wal
