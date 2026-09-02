@@ -159,7 +159,7 @@ a{color:var(--accent)}header{height:58px;background:#fff;border-bottom:1px solid
 
 
 HOME = """
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Quomodoc</title><style>{{style}}</style></head>
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Quomodoc</title><link rel="icon" type="image/svg+xml" href="{{base}}/assets/quomodoc-mark.svg"><style>{{style}}</style></head>
 <body><header><a class="brand" href="{{base}}/"><img src="{{base}}/assets/quomodoc-mark.svg" alt="">Quomodoc</a><span class="meta">HTML documents with anchored comments</span><span class="spacer"></span><button onclick="upload.showModal()">Upload HTML</button></header>
 <main class="container"><h1>Documents</h1>
 {% if docs %}<div class="grid">{% for d in docs %}<a class="card" href="{{base}}/docs/{{d.slug}}"><h2>{{d.title}}</h2><div class="meta">{{d.comment_count}} comment{{'' if d.comment_count == 1 else 's'}} · updated {{d.updated_at[:10]}}</div></a>{% endfor %}</div>{% else %}<div class="empty">No documents yet. Upload an HTML file to begin reviewing.</div>{% endif %}</main>
@@ -169,7 +169,7 @@ HOME = """
 
 
 READER = """
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{{doc.title}} · Quomodoc</title><style>{{style}}</style></head>
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{{doc.title}} · Quomodoc</title><link rel="icon" type="image/svg+xml" href="{{base}}/assets/quomodoc-mark.svg"><style>{{style}}</style></head>
 <body><header><a class="brand" href="{{base}}/"><img src="{{base}}/assets/quomodoc-mark.svg" alt="">Quomodoc</a><strong>{{doc.title}}</strong><span class="spacer"></span><span class="meta hide-mobile">Select text to comment</span></header>
 <main class="reader"><section class="viewport"><iframe id="docframe" sandbox="allow-same-origin" src="{{base}}/raw/{{doc.slug}}"></iframe></section><aside class="sidebar"><h2>Comments <span id="count">{{comments|length}}</span></h2><p class="hint">Highlight text in the document, then choose “Comment”.</p><div id="comments"></div></aside></main><button id="selectionbar" class="selectionbar">Comment</button>
 <dialog id="commentDialog"><form id="commentForm" class="dialog-body"><h2>Add comment</h2><div id="selectedQuote" class="quote"></div><label>Name</label><input id="author" value="Anonymous" maxlength="80"><label>Comment</label><textarea id="body" rows="5" maxlength="5000" required></textarea><div class="dialog-actions"><button type="button" class="secondary" onclick="commentDialog.close()">Cancel</button><button type="submit">Save</button></div></form></dialog>
