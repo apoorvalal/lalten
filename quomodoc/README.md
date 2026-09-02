@@ -9,10 +9,13 @@ typography does not depend on client-installed fonts or a third-party font CDN.
 
 - `GET /quomodoc/` — document index and browser upload form
 - `GET /quomodoc/docs/<slug>` — annotation workspace
+- `GET /quomodoc/raw/<slug>` — stable, distraction-free HTML view
 - `POST /quomodoc/api/documents` — password-protected JSON or multipart upload
 - `GET /quomodoc/cli` — download the zero-dependency interactive upload CLI
 - `GET /quomodoc/api/documents` — document listing
 - `POST /quomodoc/api/documents/<slug>/comments` — add an anchored comment
+- `POST /quomodoc/api/comments/<id>/replies` — reply to a comment
+- `POST /quomodoc/api/comments/<id>/resolve` — resolve or reopen a comment
 - `GET /quomodoc/health` — health check
 
 JSON upload shape:
@@ -30,7 +33,10 @@ The service stores only the SHA-256 verifier in `/etc/quomodoc.env`; plaintext i
 
 The downloadable CLI accepts a local HTML path, prompts for the upload password
 without putting it in shell history or process arguments, and writes through the
-HTTPS API. Quomodoc intentionally exposes no update or delete endpoint.
+HTTPS API. Uploading an existing slug replaces that document while preserving
+its comments. Quomodoc re-anchors comments by their quoted text and surrounding
+context; comments that can no longer be located are retained and marked as
+needing re-anchoring. Quomodoc intentionally exposes no delete endpoint.
 
 Uploaded scripts are disabled by iframe sandboxing and Content Security Policy.
 Styles from inline blocks, self-contained `data:` stylesheets, and HTTPS-hosted
