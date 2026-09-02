@@ -67,14 +67,17 @@ nginx (HTTPS on lalten.org)
 ### Static pages
 - Directory: `/root/lalten/pages/`
 - Files dropped here are served immediately at `https://lalten.org/pages/<filename>`.
+- Figure/table artifacts should go under `/root/lalten/pages/figtab/` and are served at `https://lalten.org/pages/figtab/<filename>`, keeping the `/pages/` root from accumulating loose support files.
 - Current notable artifacts:
   - `/pages/harness_compare_codex_clawd.html`
+  - `/pages/figtab/`
   - `/pages/lean_crash_course/`
   - `/pages/policy_cate/policy_cate_comparison.html`
   - `/pages/philly-bell.html`
   - `/pages/argminist/`
   - `/pages/econometrica-manuscript/`
   - `/pages/regmi_research_papers/`
+  - `/pages/ser2026-mediation-python/`
 
 ### Draft HTML artifacts
 - Directory: `/root/lalten/drafts/`

@@ -1,0 +1,150 @@
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.12"
+# dependencies = [
+#     "webdiff",
+# ]
+# ///
+
+# %%
+import re
+import argparse
+import shutil
+import sys
+import tarfile
+import tempfile
+import subprocess
+from pathlib import Path
+from urllib.request import urlretrieve
+
+# %%
+
+
+def get_id(url):
+    m = re.search(r"(\d{4}\.[0-9]{4,5})(v\d+)?", url)
+    if not m:
+        return None, None
+    return m.group(1), m.group(2) or ""
+
+
+def run_git_command(cmd, cwd):
+    print(f"--- Running command in '{cwd}': git {' '.join(cmd)}")
+    result = subprocess.run(
+        ["git"] + cmd, cwd=cwd, capture_output=True, text=True, check=False
+    )
+    if result.returncode != 0:
+        print(f"--- GIT ERROR STDOUT ---\n{result.stdout}")
+        print(f"--- GIT ERROR STDERR ---\n{result.stderr}")
+        raise subprocess.CalledProcessError(
+            result.returncode, cmd, result.stdout, result.stderr
+        )
+    if result.stdout.strip():
+        print(f"--- GIT STDOUT ---\n{result.stdout.strip()}")
+    return result
+
+
+# %%
+def process(old_url, new_url, src_dir=None):
+    """
+    Downloads two versions of an arXiv paper, extracts them, and
+    prepares a git repo for diffing.
+    """
+    # Use a temporary directory if None is provided
+    if src_dir is None:
+        temp_dir_manager = tempfile.TemporaryDirectory()
+        src_dir = temp_dir_manager.name
+    else:
+        # Create a dummy context manager if a directory is provided
+        from contextlib import nullcontext
+
+        temp_dir_manager = nullcontext()
+
+    with temp_dir_manager:
+        tmp_path = Path(src_dir)
+        old_src_path = tmp_path / "old_src"
+        new_src_path = tmp_path / "new_src"
+        repo_path = tmp_path / "repo"
+        print(f"--- Using directory: {tmp_path}")
+
+        # --- Download and Extract ---
+        for pid, ver, name, dest_path in [
+            (get_id(old_url)[0], get_id(old_url)[1], "old", old_src_path),
+            (get_id(new_url)[0], get_id(new_url)[1], "new", new_src_path),
+        ]:
+            if dest_path.exists():
+                shutil.rmtree(dest_path)  # Clean up previous runs
+            tar_path = tmp_path / f"{name}.tar.gz"
+            download_url = f"https://arxiv.org/src/{pid}{ver}"
+
+            print(f"--- Downloading {name} version from {download_url}")
+            urlretrieve(download_url, tar_path)
+
+            print(f"--- Extracting {tar_path} to {dest_path}")
+            dest_path.mkdir()
+            with tarfile.open(tar_path, "r:gz") as t:
+                if sys.version_info >= (3, 12):
+                    t.extractall(path=dest_path, filter="data")
+                else:
+                    t.extractall(path=dest_path)
+
+        # --- Git Operations ---
+        if repo_path.exists():
+            shutil.rmtree(repo_path)  # Clean up previous runs
+        print(f"--- Initializing git repository in {repo_path}")
+        repo_path.mkdir()
+        run_git_command(["init"], cwd=repo_path)
+        run_git_command(["config", "user.email", "debug@example.com"], cwd=repo_path)
+        run_git_command(["config", "user.name", "Debugger"], cwd=repo_path)
+
+        print(f"--- Copying OLD files from {old_src_path} to {repo_path}")
+        shutil.copytree(old_src_path, repo_path, dirs_exist_ok=True)
+
+        print("--- Staging and committing OLD version")
+        run_git_command(["add", "."], cwd=repo_path)
+        run_git_command(["commit", "-m", "old version"], cwd=repo_path)
+
+        print(f"--- Copying NEW files from {new_src_path} to {repo_path}")
+        shutil.copytree(new_src_path, repo_path, dirs_exist_ok=True)
+
+        print("\n--- Repository is ready for diffing. Running git webdiff...")
+        print("--- Your browser should open. Press Ctrl+C in this terminal to exit.")
+        run_git_command(["webdiff"], cwd=repo_path)
+
+
+# %%
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="Generate a side-by-side diff for two versions of an arXiv paper using git-webdiff. Exit with ctrl+C.",
+        formatter_class=argparse.RawTextHelpFormatter,
+        epilog="Example usage:\n  python %(prog)s 1807.02099 1 2",
+    )
+
+    parser.add_argument("paper_id", help="The arXiv paper ID (e.g., '1807.02099').")
+    parser.add_argument(
+        "v_before", type=int, help="The 'before' version number (e.g., 1)."
+    )
+    parser.add_argument(
+        "v_after", type=int, help="The 'after' version number (e.g., 2)."
+    )
+
+    args = parser.parse_args()
+
+    # Construct the full URLs from the provided arguments
+    base_url = "https://arxiv.org/abs/"
+    old_url = f"{base_url}{args.paper_id}v{args.v_before}"
+    new_url = f"{base_url}{args.paper_id}v{args.v_after}"
+
+    print(f"Preparing diff for {args.paper_id}: v{args.v_before} -> v{args.v_after}")
+    print(f"Old URL: {old_url}")
+    print(f"New URL: {new_url}\n")
+
+    try:
+        # Call the main processing function with the generated URLs
+        process(old_url, new_url)
+        print("\nExiting.")
+    except Exception as e:
+        print(f"\nAn error occurred: {e}", file=sys.stderr)
+        sys.exit(1)
+
+# %%

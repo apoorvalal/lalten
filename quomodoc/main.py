@@ -6,7 +6,7 @@ import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 
-from flask import Flask, Response, abort, jsonify, redirect, render_template_string, request
+from flask import Flask, Response, abort, jsonify, redirect, render_template_string, request, send_file
 
 
 BASE = "/quomodoc"
@@ -16,6 +16,84 @@ MAX_BYTES = 20 * 1024 * 1024
 SLUG_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = MAX_BYTES
+
+
+UPLOAD_CLI = r'''#!/usr/bin/env python3
+"""Upload one HTML document to Quomodoc over HTTPS."""
+
+import argparse
+import getpass
+import json
+import mimetypes
+import secrets
+import sys
+import urllib.error
+import urllib.request
+from pathlib import Path
+
+
+ENDPOINT = "https://lalten.org/quomodoc/api/documents"
+
+
+def field(boundary, name, value, filename=None, content_type=None):
+    disposition = f'form-data; name="{name}"'
+    if filename is not None:
+        disposition += f'; filename="{filename}"'
+    headers = [f"Content-Disposition: {disposition}"]
+    if content_type:
+        headers.append(f"Content-Type: {content_type}")
+    return (
+        f"--{boundary}\r\n" + "\r\n".join(headers) + "\r\n\r\n"
+    ).encode() + value + b"\r\n"
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("html", type=Path, help="self-contained HTML file")
+    parser.add_argument("--title", help="homepage title; defaults to filename")
+    parser.add_argument("--slug", default="", help="optional URL slug")
+    args = parser.parse_args()
+
+    if not args.html.is_file():
+        parser.error(f"file not found: {args.html}")
+    content = args.html.read_bytes()
+    if len(content) > 20 * 1024 * 1024:
+        parser.error("HTML file exceeds Quomodoc's 20 MiB limit")
+
+    password = getpass.getpass("Quomodoc upload password: ")
+    boundary = "quomodoc-" + secrets.token_hex(16)
+    title = args.title or args.html.stem.replace("-", " ").replace("_", " ").title()
+    body = b"".join([
+        field(boundary, "password", password.encode()),
+        field(boundary, "title", title.encode()),
+        field(boundary, "slug", args.slug.encode()),
+        field(
+            boundary,
+            "file",
+            content,
+            filename=args.html.name,
+            content_type=mimetypes.guess_type(args.html.name)[0] or "text/html",
+        ),
+        f"--{boundary}--\r\n".encode(),
+    ])
+    request = urllib.request.Request(
+        ENDPOINT,
+        data=body,
+        headers={"Content-Type": f"multipart/form-data; boundary={boundary}"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request) as response:
+            result = json.load(response)
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode(errors="replace")
+        raise SystemExit(f"upload failed ({exc.code}): {detail}") from None
+    print(result["url"])
+
+
+if __name__ == "__main__":
+    main()
+'''
 
 
 def db():
@@ -73,8 +151,9 @@ def document_or_404(slug):
 
 
 SHELL_STYLE = """
+@font-face{font-family:IBMPlexSans;src:url(/quomodoc/assets/ibm-plex-sans.woff2) format(woff2);font-style:normal;font-weight:400 700;font-display:swap}
 :root{--ink:#17202a;--muted:#697386;--line:#d9dee7;--paper:#fff;--accent:#3757d5;--mark:#ffe88b}
-*{box-sizing:border-box}body{margin:0;background:#f5f6f8;color:var(--ink);font:15px/1.5 ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+*{box-sizing:border-box}body{margin:0;background:#f5f6f8;color:var(--ink);font:15px/1.5 IBMPlexSans,sans-serif}
 a{color:var(--accent)}header{height:58px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:16px;padding:0 22px;position:sticky;top:0;z-index:20}.brand{font-weight:750;font-size:18px;text-decoration:none;color:var(--ink)}.spacer{flex:1}.button,button{border:0;border-radius:8px;background:var(--accent);color:#fff;padding:9px 14px;font-weight:650;cursor:pointer;text-decoration:none}.secondary{background:#edf0f7;color:#24324a}.container{max-width:1080px;margin:32px auto;padding:0 22px}.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}.card{display:block;background:#fff;border:1px solid var(--line);border-radius:12px;padding:18px;text-decoration:none;color:inherit;box-shadow:0 2px 8px #17202a0a}.card:hover{border-color:#aeb9d0}.card h2{margin:0 0 7px;font-size:18px}.meta{color:var(--muted);font-size:13px}.empty{background:#fff;border:1px dashed #bbc3d1;border-radius:12px;padding:44px;text-align:center;color:var(--muted)}dialog{border:0;border-radius:14px;box-shadow:0 20px 70px #17202a44;width:min(560px,calc(100vw - 30px));padding:0}dialog::backdrop{background:#17202a88}.dialog-body{padding:22px}.dialog-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px}label{display:block;font-weight:650;margin:12px 0 5px}input,textarea{width:100%;border:1px solid #b9c1cf;border-radius:8px;padding:10px;font:inherit}.reader{height:calc(100dvh - 58px);display:grid;grid-template-columns:minmax(0,1fr) 330px}.viewport{padding:20px;background:#dfe3e9;min-width:0}.viewport iframe{width:100%;height:100%;border:1px solid #c4cad5;border-radius:8px;background:#fff;box-shadow:0 3px 16px #17202a18}.sidebar{background:#fff;border-left:1px solid var(--line);overflow:auto;padding:18px}.sidebar h2{font-size:17px;margin:0 0 12px}.hint{color:var(--muted);font-size:13px}.comment{border:1px solid var(--line);border-radius:9px;padding:11px;margin:10px 0;cursor:pointer}.comment:hover{border-color:#9aa8c4}.quote{font-size:13px;color:#5f6776;border-left:3px solid #e2c33f;padding-left:8px;margin-bottom:7px}.comment-body{white-space:pre-wrap}.comment-meta{color:var(--muted);font-size:11px;margin-top:7px}.selectionbar{display:none;position:fixed;z-index:50;background:#17202a;color:#fff;border-radius:9px;padding:7px 10px;box-shadow:0 5px 20px #0005;cursor:pointer;font-weight:650}@media(max-width:760px){.reader{display:block;height:auto}.viewport{height:62dvh;padding:10px}.sidebar{border-left:0;border-top:1px solid var(--line);min-height:38dvh}.hide-mobile{display:none}}
 """
 
@@ -135,7 +214,18 @@ def reader(slug):
 def raw(slug):
     doc = document_or_404(slug)
     response = Response(doc["html"], content_type="text/html; charset=utf-8")
-    response.headers["Content-Security-Policy"] = "default-src 'none'; style-src 'unsafe-inline' https:; img-src data: https:; font-src data: https:; media-src https:; script-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'"
+    # Quarto's self-contained output stores its stylesheets in data: URLs.
+    # Permit only the exact audited KaTeX 0.16.22 bundle and Quarto renderer
+    # used by trusted paper exports; all other uploaded JavaScript stays inert.
+    katex_hash = "'sha256-QMvK7j+MFv6mQ7oISjOASkqwF2cjuG4bzXuAS3mDZsw='"
+    katex_renderer_hash = "'sha256-67kRF6ir7uYcntligDJr9ckJ39fnGm98n5gLaDW7/a8='"
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'none'; "
+        "style-src 'unsafe-inline' data: https:; "
+        "img-src data: https:; font-src data: https:; media-src https:; "
+        f"script-src {katex_hash} {katex_renderer_hash}; "
+        "connect-src 'none'; form-action 'none'; base-uri 'none'"
+    )
     response.headers["X-Content-Type-Options"] = "nosniff"
     return response
 
@@ -215,6 +305,19 @@ def api_list():
 @app.get(f"{BASE}/health")
 def health():
     return jsonify(status="ok")
+
+
+@app.get(f"{BASE}/assets/ibm-plex-sans.woff2")
+def ibm_plex_sans():
+    return send_file(ROOT / "ibm-plex-sans.woff2", mimetype="font/woff2", max_age=31536000)
+
+
+@app.get(f"{BASE}/cli")
+def download_cli():
+    response = Response(UPLOAD_CLI, content_type="text/x-python; charset=utf-8")
+    response.headers["Content-Disposition"] = 'attachment; filename="quomodoc-upload.py"'
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    return response
 
 
 @app.errorhandler(413)

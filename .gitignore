@@ -82,6 +82,7 @@ target/
 
 # Jupyter Notebook
 .ipynb_checkpoints
+.jupyter_cache/
 
 # IPython
 profile_default/
@@ -222,3 +223,4 @@ data/
 
 # Local scratch/backups
 /tmp/
+/.trash/

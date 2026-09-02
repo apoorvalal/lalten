@@ -1,0 +1,14 @@
+[project]
+name = "arxivdiff-web"
+version = "0.1.0"
+description = "FastAPI wrapper for browsing diffs between arXiv source versions."
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115",
+    "python-multipart>=0.0.20",
+    "uvicorn[standard]>=0.30",
+    "webdiff>=1.0",
+]
+
+[project.scripts]
+arxivdiff-web = "app.main:main"

@@ -1,0 +1,18 @@
+[Unit]
+Description=arxivdiff FastAPI web application
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/lalten/apps/arxivdiff-web
+Environment=HOST=127.0.0.1
+Environment=PORT=8757
+Environment=ARXIVDIFF_BASE_PATH=/arxivdiff
+Environment=ARXIVDIFF_DATA_DIR=/root/lalten/data/arxivdiff
+ExecStart=/snap/bin/uv run python -m app.main
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
